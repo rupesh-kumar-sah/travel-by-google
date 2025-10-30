@@ -87,3 +87,16 @@ export interface SearchResult {
     text: string;
     sources: GroundingChunk[];
 }
+
+// Moved from geminiService.ts
+export interface TripIdea {
+  title: string;
+  prompt: string;
+}
+
+// Moved from geminiService.ts
+export interface DynamicHeroContent {
+  title: string;
+  description: string;
+  image: string; // base64 string or URL
+}

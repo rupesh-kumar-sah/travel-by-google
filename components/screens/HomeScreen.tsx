@@ -1,12 +1,45 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { SearchIcon, MicIcon, PhoneIcon, AlertIcon, SparklesIcon, LightbulbIcon, UserPlusIcon, TrashIcon, DollarSignIcon, CalendarIcon, UsersIcon, PlannerIcon } from '../Icons';
-import { getAiSearchGroundedResponse, getDestinationDetailsStream, getAIFeaturedDestinations, getTravelTip, getDynamicHeroContent, DynamicHeroContent } from '../../services/geminiService';
-import { SearchResult, Destination } from '../../types';
+import { getAiSearchGroundedResponse, getDestinationDetailsStream } from '../../services/geminiService';
+import { SearchResult, Destination, DynamicHeroContent } from '../../types';
 
 interface EmergencyContact {
     name: string;
     phone: string;
 }
+
+const staticHeroContent: DynamicHeroContent = {
+    title: "Discover Annapurna",
+    description: "Trek through stunning landscapes to the base of the world's 10th highest peak.",
+    image: 'https://images.unsplash.com/photo-1542392084-566d4847314a?q=80&w=400&auto=format&fit=crop',
+};
+
+const staticTravelTip = "Pack layers! The weather in the mountains can change in an instant.";
+
+const staticDestinations: Omit<Destination, 'id'>[] = [
+    {
+        name: 'Poon Hill Trek',
+        location: 'Gandaki Province',
+        description: 'A relatively easy trek offering some of the most spectacular mountain scenery in the Annapurna region.',
+        image: 'https://images.unsplash.com/photo-1605788485215-35990d068502?q=80&w=400&auto=format&fit=crop',
+        tags: ['Trending', 'Nature'],
+    },
+    {
+        name: 'Bhaktapur Durbar Square',
+        location: 'Kathmandu Valley',
+        description: "A UNESCO World Heritage site, showcasing the valley's rich medieval art, architecture, and culture.",
+        image: 'https://images.unsplash.com/photo-1595361042152-4a7b74f07937?q=80&w=400&auto=format&fit=crop',
+        tags: ['Cultural', 'AI Pick'],
+    },
+    {
+        name: 'Chitwan National Park',
+        location: 'Terai Region',
+        description: 'Explore the lush jungles and spot rare wildlife, including one-horned rhinos and Bengal tigers.',
+        image: 'https://images.unsplash.com/photo-1579282240050-8488b7b04975?q=80&w=400&auto=format&fit=crop',
+        tags: ['Adventure', 'Hidden Gem'],
+    }
+];
+
 
 const PersonalizedHeader: React.FC<{ name: string }> = ({ name }) => {
     const [greeting, setGreeting] = useState('');
@@ -484,16 +517,11 @@ const HomeScreen: React.FC = () => {
     const [searchResults, setSearchResults] = useState<SearchResult | null>(null);
     const [isSearching, setIsSearching] = useState(false);
     const [searchError, setSearchError] = useState('');
-    const [destinations, setDestinations] = useState<Omit<Destination, 'id'>[]>([]);
-    const [isLoadingAIDestinations, setIsLoadingAIDestinations] = useState(true);
     const [selectedDestination, setSelectedDestination] = useState<Omit<Destination, 'id'> | null>(null);
     const [zoomedImage, setZoomedImage] = useState<string | null>(null);
     
     // State for new dynamic features & search
     const [searchQuery, setSearchQuery] = useState('');
-    const [dynamicHero, setDynamicHero] = useState<DynamicHeroContent | null>(null);
-    const [travelTip, setTravelTip] = useState<string | null>(null);
-    const [isLoadingDynamicContent, setIsLoadingDynamicContent] = useState(true);
     const [isListening, setIsListening] = useState(false);
     const recognitionRef = useRef<any>(null);
 
@@ -566,45 +594,11 @@ const HomeScreen: React.FC = () => {
         setSearchQuery(prev => (prev.trim() + ' ' + append).trim());
     };
 
-    useEffect(() => {
-        const fetchDynamicContent = async () => {
-            setIsLoadingDynamicContent(true);
-            try {
-                const [heroContent, tip] = await Promise.all([
-                    getDynamicHeroContent(),
-                    getTravelTip(),
-                ]);
-                setDynamicHero(heroContent);
-                setTravelTip(tip);
-            } catch (error) {
-                console.error("Failed to fetch dynamic hero/tip:", error);
-            } finally {
-                setIsLoadingDynamicContent(false);
-            }
-        };
-
-        const fetchAIDestinations = async () => {
-            setIsLoadingAIDestinations(true);
-            try {
-                // The service now returns a full list of destinations with AI-generated images
-                const newDestinations = await getAIFeaturedDestinations(3);
-                setDestinations(newDestinations);
-            } catch (error) {
-                console.error("Failed to fetch AI destinations:", error);
-            } finally {
-                setIsLoadingAIDestinations(false);
-            }
-        };
-
-        fetchDynamicContent();
-        fetchAIDestinations();
-    }, []);
-
     return (
         <>
             <div className="w-full text-white space-y-4 pb-4">
-                <PersonalizedHeader name="John" />
-                <DynamicDiscoverSection content={dynamicHero} isLoading={isLoadingDynamicContent} />
+                <PersonalizedHeader name="Explorer" />
+                <DynamicDiscoverSection content={staticHeroContent} isLoading={false} />
                 <SearchBar 
                     query={searchQuery} 
                     onQueryChange={setSearchQuery} 
@@ -617,7 +611,7 @@ const HomeScreen: React.FC = () => {
                 {isSearching && <div className="text-center px-4 -my-2 text-sm text-gray-400">🔎 Searching with AI...</div>}
                 {searchError && <div className="text-center px-4 -my-2 text-sm text-red-400">{searchError}</div>}
                 
-                <TravelTipCard tip={travelTip} isLoading={isLoadingDynamicContent} />
+                <TravelTipCard tip={staticTravelTip} isLoading={false} />
                 <Categories onCategoryClick={setSearchQuery} />
                 
                 <div className="px-4 pt-4">
@@ -626,22 +620,14 @@ const HomeScreen: React.FC = () => {
                         <a href="#" className="text-sm text-teal-400">View all</a>
                     </div>
                     <div className="space-y-4">
-                        {isLoadingAIDestinations ? (
-                            <>
-                                <DestinationCardSkeleton />
-                                <DestinationCardSkeleton />
-                                <DestinationCardSkeleton />
-                            </>
-                        ) : (
-                           destinations.map(dest => (
-                                <DestinationCard 
-                                    key={dest.name} 
-                                    dest={dest} 
-                                    onClick={() => setSelectedDestination(dest)} 
-                                    onImageClick={() => setZoomedImage(dest.image)}
-                                />
-                            ))
-                        )}
+                       {staticDestinations.map(dest => (
+                            <DestinationCard 
+                                key={dest.name} 
+                                dest={dest} 
+                                onClick={() => setSelectedDestination(dest)} 
+                                onImageClick={() => setZoomedImage(dest.image)}
+                            />
+                        ))}
                     </div>
                 </div>
                 
