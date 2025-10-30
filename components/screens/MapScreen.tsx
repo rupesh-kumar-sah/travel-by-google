@@ -1,24 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
 import { findNearbyPlaces } from '../../services/geminiService';
-
-interface GroundingChunk {
-    web?: {
-        uri: string;
-        title: string;
-    };
-    maps?: {
-        uri: string;
-        title: string;
-        placeAnswerSources?: {
-            reviewSnippets: {
-                uri: string;
-                title: string;
-                text: string;
-            }[];
-        }[]
-    }
-}
+import { GroundingChunk } from '../../types';
+import { ChevronDownIcon, ExternalLinkIcon } from '../Icons';
 
 const MapScreen: React.FC = () => {
     const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
@@ -26,6 +9,7 @@ const MapScreen: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [activeCategory, setActiveCategory] = useState<string | null>(null);
+    const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
 
     useEffect(() => {
         navigator.geolocation.getCurrentPosition(
@@ -53,10 +37,11 @@ const MapScreen: React.FC = () => {
         setError(null);
         setPlaces([]);
         setActiveCategory(category);
+        setSelectedPlaceId(null); // Reset selection on new search
         try {
             const response = await findNearbyPlaces(category, userLocation);
             const groundingMetadata = response.candidates?.[0]?.groundingMetadata;
-            if (groundingMetadata?.groundingChunks) {
+            if (groundingMetadata?.groundingChunks && groundingMetadata.groundingChunks.length > 0) {
                 setPlaces(groundingMetadata.groundingChunks);
             } else {
                  setPlaces([]);
@@ -82,35 +67,70 @@ const MapScreen: React.FC = () => {
                     <button 
                         key={cat} 
                         onClick={() => handleSearch(cat)}
-                        className={`px-4 py-2 rounded-full text-sm capitalize ${activeCategory === cat ? 'bg-teal-500 text-black' : 'bg-gray-800 text-gray-300 border border-gray-700'}`}
+                        className={`px-4 py-2 rounded-full text-sm capitalize transition-colors ${activeCategory === cat ? 'bg-teal-500 text-black font-semibold' : 'bg-gray-800 text-gray-300 border border-gray-700 hover:bg-gray-700'}`}
                     >
                         {cat}
                     </button>
                 ))}
             </div>
 
-            {loading && <div className="text-center p-8">Loading nearby {activeCategory}...</div>}
+            {loading && <div className="text-center p-8 text-gray-400">Searching for nearby {activeCategory}...</div>}
             {error && <div className="text-center p-8 text-red-400">{error}</div>}
 
             <div className="space-y-3">
                 {places.map((place, index) => {
                     const mapData = place.maps;
                     if (!mapData) return null;
+                    const placeId = mapData.uri || `place-${index}`;
+                    const isSelected = selectedPlaceId === placeId;
+
                     return (
-                        <a href={mapData.uri} target="_blank" rel="noopener noreferrer" key={index} className="block bg-[#1C1C1E] border border-gray-800 rounded-2xl p-4 hover:bg-gray-800 transition-colors">
-                            <div className="flex justify-between items-start">
-                                <div>
-                                    <h3 className="font-bold text-lg text-teal-300">{mapData.title}</h3>
-                                    {mapData.placeAnswerSources?.[0]?.reviewSnippets?.[0]?.text &&
-                                        <p className="text-sm text-gray-400 mt-1 italic">"{mapData.placeAnswerSources[0].reviewSnippets[0].text}"</p>
-                                    }
+                        <div key={placeId} className="bg-[#1C1C1E] border border-gray-800 rounded-2xl overflow-hidden transition-all duration-300">
+                            <button
+                                onClick={() => setSelectedPlaceId(isSelected ? null : placeId)}
+                                className="w-full text-left p-4 flex justify-between items-center"
+                                aria-expanded={isSelected}
+                                aria-controls={`place-details-${index}`}
+                            >
+                                <h3 className="font-bold text-lg text-teal-300 pr-2">{mapData.title}</h3>
+                                <ChevronDownIcon className={`flex-shrink-0 w-5 h-5 text-gray-400 transform transition-transform duration-300 ${isSelected ? 'rotate-180' : ''}`} />
+                            </button>
+
+                            {isSelected && (
+                                <div 
+                                    id={`place-details-${index}`}
+                                    className="px-4 pb-4 pt-2 border-t border-gray-700/50 space-y-3 animate-fadeIn"
+                                >
+                                    {mapData.placeAnswerSources?.[0]?.reviewSnippets?.[0]?.text ? (
+                                        <p className="text-sm text-gray-400 italic">
+                                            "{mapData.placeAnswerSources[0].reviewSnippets[0].text}"
+                                        </p>
+                                    ) : (
+                                        <p className="text-sm text-gray-500">No additional details available.</p>
+                                    )}
+                                    <a
+                                        href={mapData.uri}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-2 text-sm text-cyan-400 hover:underline font-semibold"
+                                    >
+                                        View on Map <ExternalLinkIcon className="w-4 h-4" />
+                                    </a>
                                 </div>
-                                <span className="text-gray-500 text-2xl">📍</span>
-                            </div>
-                        </a>
+                            )}
+                        </div>
                     )
                 })}
             </div>
+             <style>{`
+              @keyframes fadeIn {
+                  from { opacity: 0; transform: translateY(-10px); }
+                  to { opacity: 1; transform: translateY(0); }
+              }
+              .animate-fadeIn {
+                  animation: fadeIn 0.3s ease-out forwards;
+              }
+          `}</style>
         </div>
     );
 };

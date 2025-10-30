@@ -1,19 +1,40 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { SparklesIcon } from '../Icons';
-import { planComplexTrip } from '../../services/geminiService';
-
-const examplePrompts = [
-  "A 10-day luxury spiritual retreat in the Kathmandu valley, focusing on yoga, meditation, and ancient temples.",
-  "An adventurous 7-day trek for a group of 4 fit beginners, including rafting and wildlife safari. Budget-friendly.",
-  "Family-friendly 5-day trip to Pokhara, with easy hikes, boating, and cultural experiences for kids under 10.",
-  "Solo female traveler's 14-day itinerary covering both cultural heritage sites and a moderate trek with great mountain views."
-];
+import { planComplexTripStream, getTripIdeas, TripIdea } from '../../services/geminiService';
 
 const PlannerScreen: React.FC = () => {
     const [prompt, setPrompt] = useState('');
     const [itinerary, setItinerary] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    // New state for AI-powered ideas
+    const [tripIdeas, setTripIdeas] = useState<TripIdea[]>([]);
+    const [isLoadingIdeas, setIsLoadingIdeas] = useState(true);
+    const [ideasError, setIdeasError] = useState<string | null>(null);
+
+    // Fetch ideas on component mount
+    useEffect(() => {
+        const fetchIdeas = async () => {
+            setIsLoadingIdeas(true);
+            setIdeasError(null);
+            try {
+                const ideas = await getTripIdeas();
+                if (ideas.length > 0) {
+                    setTripIdeas(ideas);
+                } else {
+                    setIdeasError("Couldn't generate trip ideas right now.");
+                }
+            } catch (err) {
+                console.error(err);
+                setIdeasError("Failed to fetch trip ideas from the AI service.");
+            } finally {
+                setIsLoadingIdeas(false);
+            }
+        };
+        fetchIdeas();
+    }, []); // Empty array ensures this runs only once
+
 
     const handleGeneratePlan = async () => {
         if (!prompt.trim()) {
@@ -22,10 +43,12 @@ const PlannerScreen: React.FC = () => {
         }
         setIsLoading(true);
         setError(null);
-        setItinerary(null);
+        setItinerary(''); // Initialize with empty string for streaming
         try {
-            const result = await planComplexTrip(prompt);
-            setItinerary(result);
+            const stream = await planComplexTripStream(prompt);
+            for await (const chunk of stream) {
+                setItinerary(prev => (prev ?? '') + chunk.text);
+            }
         } catch (err) {
             console.error(err);
             setError("Sorry, I couldn't generate a plan. The AI service might be busy. Please try again.");
@@ -38,7 +61,7 @@ const PlannerScreen: React.FC = () => {
         <div className="p-4 space-y-6 text-white">
             <div>
                 <h1 className="text-2xl font-bold">AI Trip Planner</h1>
-                <p className="text-gray-400">Describe your ideal trip to Nepal, and our AI will craft a personalized itinerary just for you.</p>
+                <p className="text-gray-400">Describe your ideal trip, or get inspired by an AI-suggested idea below.</p>
             </div>
 
             <div className="bg-[#1C1C1E] border border-gray-800 rounded-2xl p-4 space-y-4">
@@ -69,15 +92,37 @@ const PlannerScreen: React.FC = () => {
                 </button>
             </div>
 
-            <div className="space-y-2">
-                <h3 className="font-semibold text-gray-400">Need inspiration? Try one of these:</h3>
-                <div className="flex flex-wrap gap-2">
-                    {examplePrompts.map((p, i) => (
-                        <button key={i} onClick={() => setPrompt(p)} className="text-xs bg-gray-800 text-gray-300 px-3 py-1 rounded-full border border-gray-700 hover:bg-gray-700">
-                           "{p.substring(0, 30)}..."
-                        </button>
-                    ))}
-                </div>
+            <div className="space-y-3">
+                <h2 className="text-xl font-bold flex items-center gap-2">
+                    <SparklesIcon className="w-5 h-5 text-yellow-400" />
+                    <span>AI Trip Ideas</span>
+                </h2>
+                {isLoadingIdeas && (
+                    <div className="flex gap-3 overflow-hidden">
+                        {[...Array(3)].map((_, i) => (
+                             <div key={i} className="bg-gray-800 animate-pulse rounded-2xl p-4 min-w-[200px] h-[100px]"></div>
+                        ))}
+                    </div>
+                )}
+                {ideasError && !isLoadingIdeas && (
+                    <div className="bg-red-900/20 text-red-300 text-sm p-3 rounded-lg border border-red-500/30">
+                        {ideasError}
+                    </div>
+                )}
+                {!isLoadingIdeas && tripIdeas.length > 0 && (
+                    <div className="flex gap-3 overflow-x-auto pb-2 -mb-2 no-scrollbar">
+                        {tripIdeas.map((idea, index) => (
+                            <button 
+                                key={index} 
+                                onClick={() => setPrompt(idea.prompt)}
+                                className="min-w-[200px] flex-shrink-0 bg-[#1C1C1E] border border-gray-800 rounded-2xl p-4 text-left hover:border-teal-500 transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500"
+                            >
+                                <h3 className="font-bold text-teal-300">{idea.title}</h3>
+                                <p className="text-xs text-gray-400 mt-1 line-clamp-2">{idea.prompt}</p>
+                            </button>
+                        ))}
+                    </div>
+                )}
             </div>
 
             {error && (
@@ -94,6 +139,16 @@ const PlannerScreen: React.FC = () => {
                     </div>
                 </div>
             )}
+            <style>{`
+                .no-scrollbar::-webkit-scrollbar { display: none; }
+                .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+                .line-clamp-2 {
+                    overflow: hidden;
+                    display: -webkit-box;
+                    -webkit-box-orient: vertical;
+                    -webkit-line-clamp: 2;
+                }
+            `}</style>
         </div>
     );
 };

@@ -1,101 +1,159 @@
-import React, { useState, useEffect } from 'react';
-import { SearchIcon, MicIcon, PhoneIcon, AlertIcon, SparklesIcon } from '../Icons';
-import { getAiSearchGroundedResponse, getDestinationDetailsStream, getAIFeaturedDestinations } from '../../services/geminiService';
+import React, { useState, useEffect, useRef } from 'react';
+import { SearchIcon, MicIcon, PhoneIcon, AlertIcon, SparklesIcon, LightbulbIcon, UserPlusIcon, TrashIcon, DollarSignIcon, CalendarIcon, UsersIcon, PlannerIcon } from '../Icons';
+import { getAiSearchGroundedResponse, getDestinationDetailsStream, getAIFeaturedDestinations, getTravelTip, getDynamicHeroContent, DynamicHeroContent } from '../../services/geminiService';
 import { SearchResult, Destination } from '../../types';
 
-const initialDestinations: Omit<Destination, 'id'>[] = [
-  {
-    name: 'Mount Everest Base Camp',
-    location: 'Solukhumbu',
-    description: "Challenge yourself with an unforgettable trek to the base of the world's tallest peak. Witness awe-inspiring Himalayan vistas and immerse yourself in Sherpa culture.",
-    image: 'https://placehold.co/400x300/0d0d0d/ffffff?text=Everest',
-    tags: ['Trending', 'AI Pick']
-  },
-  {
-    name: 'Pokhara Valley',
-    location: 'Gandaki Province',
-    description: 'Discover the tranquil beauty of Phewa Lake, perfectly reflecting the Annapurna mountain range. A paradise for nature lovers and adventure seekers.',
-    image: 'https://placehold.co/400x300/0d0d0d/ffffff?text=Pokhara',
-    tags: ['Trending']
-  },
-  {
-    name: 'Kathmandu Durbar Square',
-    location: 'Kathmandu',
-    description: "Step back in time at this UNESCO World Heritage site. Explore intricate Newari architecture, ancient royal palaces, and living temples bustling with devotees.",
-    image: 'https://placehold.co/400x300/0d0d0d/ffffff?text=Kathmandu',
-    tags: ['AI Pick']
-  }
-];
+interface EmergencyContact {
+    name: string;
+    phone: string;
+}
 
-const Header: React.FC = () => (
-    <div className="p-4 flex justify-between items-center">
-        <div className="flex items-center gap-2">
-            <img src="https://placehold.co/40x40/14b8a6/000000?text=TN" alt="logo" className="w-8 h-8 rounded-full" />
-            <span className="font-bold text-lg text-white">TravelNepal.ai</span>
-        </div>
-        <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-            <span className="text-sm text-gray-300">AI</span>
-        </div>
-    </div>
-);
+const PersonalizedHeader: React.FC<{ name: string }> = ({ name }) => {
+    const [greeting, setGreeting] = useState('');
 
-const DiscoverSection: React.FC = () => (
-    <div className="p-4 pt-0">
-        <div className="h-48 rounded-2xl bg-cover bg-center flex flex-col justify-end p-4" style={{backgroundImage: "url('https://placehold.co/400x200/0d0d0d/14b8a6?text=Discover+Nepal')"}}>
-            <div className="bg-black/30 backdrop-blur-sm p-2 rounded-lg">
-                <h1 className="text-2xl font-bold text-white">Discover Nepal</h1>
-                <p className="text-sm text-gray-200">AI-powered travel companion for your adventure</p>
+    useEffect(() => {
+        const hours = new Date().getHours();
+        if (hours < 12) setGreeting('Good Morning');
+        else if (hours < 18) setGreeting('Good Afternoon');
+        else setGreeting('Good Evening');
+    }, []);
+
+    return (
+        <div className="p-4 flex justify-between items-center">
+            <div>
+                <h1 className="text-xl font-bold text-white">{greeting}, {name}</h1>
+                <p className="text-sm text-gray-400">Let's plan your next adventure!</p>
+            </div>
+            <div className="flex items-center gap-2 p-2 bg-gray-800/50 rounded-full border border-gray-700">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span className="text-sm text-gray-300">AI Connected</span>
             </div>
         </div>
-    </div>
-);
+    );
+};
 
-const SearchBar: React.FC<{ onSearch: (results: SearchResult) => void; onLoading: (loading: boolean) => void; onError: (error: string) => void; }> = ({ onSearch, onLoading, onError }) => {
-    const [query, setQuery] = useState('');
-
-    const handleSearch = async () => {
-        if (!query.trim()) return;
-        onLoading(true);
-        onError('');
-        try {
-            const response = await getAiSearchGroundedResponse(query);
-            const groundingMetadata = response.candidates?.[0]?.groundingMetadata;
-            onSearch({
-                text: response.text,
-                sources: groundingMetadata?.groundingChunks || [],
-            });
-        } catch (error) {
-            console.error("Search failed:", error);
-            onError("Sorry, the AI search failed. Please try again.");
-        } finally {
-            onLoading(false);
-        }
-    };
+const DynamicDiscoverSection: React.FC<{ content: DynamicHeroContent | null; isLoading: boolean }> = ({ content, isLoading }) => {
+    if (isLoading || !content) {
+        return (
+            <div className="p-4 pt-0">
+                <div className="h-48 rounded-2xl bg-gray-800 animate-pulse"></div>
+            </div>
+        );
+    }
     
+    return (
+        <div className="p-4 pt-0">
+            <div className="h-48 rounded-2xl bg-cover bg-center flex flex-col justify-end p-4 relative overflow-hidden" style={{backgroundImage: `url('${content.image}')`}}>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
+                <div className="relative z-10 bg-black/30 backdrop-blur-sm p-2 rounded-lg">
+                    <h2 className="text-2xl font-bold text-white">{content.title}</h2>
+                    <p className="text-sm text-gray-200">{content.description}</p>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const TravelTipCard: React.FC<{ tip: string | null; isLoading: boolean }> = ({ tip, isLoading }) => {
+    const [isVisible, setIsVisible] = useState(true);
+
+    useEffect(() => {
+        // Show card again when a new tip is loaded
+        if (tip) setIsVisible(true);
+    }, [tip]);
+
+    if (!isVisible || (!tip && !isLoading)) return null;
+
+    return (
+         <div className="px-4">
+             <div className="bg-teal-900/50 border border-teal-500/30 rounded-2xl p-3 flex items-start gap-3">
+                 <div className="text-yellow-300 mt-0.5"><LightbulbIcon className="w-5 h-5"/></div>
+                 <div className="flex-1">
+                     <p className="text-sm font-semibold text-teal-200">AI Travel Tip</p>
+                     {isLoading ? (
+                        <div className="h-4 w-3/4 bg-gray-700/50 rounded mt-1 animate-pulse"></div>
+                     ) : (
+                        <p className="text-xs text-gray-300">{tip}</p>
+                     )}
+                 </div>
+                 <button onClick={() => setIsVisible(false)} className="text-gray-500 text-lg leading-none -mt-1">&times;</button>
+             </div>
+         </div>
+    );
+};
+
+const SearchBar: React.FC<{ 
+    query: string; 
+    onQueryChange: (q: string) => void; 
+    onSearch: () => void;
+    onVoiceClick: () => void;
+    isListening: boolean;
+}> = ({ query, onQueryChange, onSearch, onVoiceClick, isListening }) => {
     return (
         <div className="px-4 relative">
             <SearchIcon className="absolute left-8 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5"/>
             <input 
                 type="text"
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                placeholder="AI-powered search: 'trekking', 'temples'..."
-                className="w-full bg-[#1C1C1E] border border-gray-700 rounded-full py-3 pl-12 pr-12 text-white placeholder-gray-500"
+                onChange={(e) => onQueryChange(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && onSearch()}
+                placeholder={isListening ? "Listening..." : "AI-powered search: 'trekking', 'temples'..."}
+                className="w-full bg-[#1C1C1E] border border-gray-700 rounded-full py-3 pl-12 pr-12 text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
             />
-            <MicIcon className="absolute right-8 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5"/>
+            <button onClick={onVoiceClick} className="absolute right-8 top-1/2 -translate-y-1/2" aria-label="Voice search">
+                <MicIcon className={`w-5 h-5 transition-colors ${isListening ? 'text-teal-400 animate-pulse' : 'text-gray-400'}`}/>
+            </button>
         </div>
     );
 };
 
-const Categories: React.FC = () => (
-    <div className="p-4 flex gap-3">
-        <button className="px-4 py-2 bg-teal-500/20 text-teal-300 rounded-full text-sm border border-teal-500/50">Trekking</button>
-        <button className="px-4 py-2 bg-gray-800 text-gray-300 rounded-full text-sm border border-gray-700">Cultural</button>
-        <button className="px-4 py-2 bg-gray-800 text-gray-300 rounded-full text-sm border border-gray-700">Adventure</button>
-    </div>
-);
+const SearchFilters: React.FC<{ onFilterClick: (append: string) => void }> = ({ onFilterClick }) => {
+    const filters = [
+        { label: 'Cost', append: 'with a cost estimate', icon: <DollarSignIcon className="w-4 h-4" /> },
+        { label: 'Best Time', append: 'and the best time to visit', icon: <CalendarIcon className="w-4 h-4" /> },
+        { label: 'For Families', append: 'suitable for families', icon: <UsersIcon className="w-4 h-4" /> },
+        { label: '7-Day Plan', append: 'as a 7-day itinerary', icon: <PlannerIcon className="w-4 h-4" /> }
+    ];
+
+    return (
+        <div className="px-4">
+            <p className="text-xs text-gray-400 mb-2 ml-1">Refine with AI:</p>
+            <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+                {filters.map(filter => (
+                    <button
+                        key={filter.label}
+                        onClick={() => onFilterClick(filter.append)}
+                        className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-gray-800 text-gray-300 rounded-full text-xs border border-gray-700 hover:bg-teal-500/20 hover:text-teal-300 transition-colors"
+                    >
+                        {filter.icon}
+                        <span>{filter.label}</span>
+                    </button>
+                ))}
+            </div>
+        </div>
+    );
+};
+
+
+const Categories: React.FC<{ onCategoryClick: (category: string) => void }> = ({ onCategoryClick }) => {
+    const categories = ['Trekking', 'Cultural', 'Adventure', 'Food', 'Nature'];
+    return (
+        <div className="px-4">
+             <div className="flex gap-3 overflow-x-auto pb-2 -mb-2 no-scrollbar">
+                {categories.map(cat => (
+                     <button 
+                        key={cat}
+                        onClick={() => onCategoryClick(cat)}
+                        className="px-4 py-2 bg-gray-800 text-gray-300 rounded-full text-sm border border-gray-700 flex-shrink-0 hover:bg-teal-500/20 hover:text-teal-300 transition-colors"
+                     >
+                         {cat}
+                     </button>
+                ))}
+             </div>
+             <style>{`.no-scrollbar::-webkit-scrollbar { display: none; } .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }`}</style>
+        </div>
+    );
+};
 
 const EmergencyCard: React.FC = () => (
     <div className="px-4">
@@ -116,6 +174,120 @@ const EmergencyCard: React.FC = () => (
     </div>
 );
 
+const CustomEmergencyContacts: React.FC = () => {
+    const [contacts, setContacts] = useState<EmergencyContact[]>([]);
+    const [isAdding, setIsAdding] = useState(false);
+    const [newName, setNewName] = useState('');
+    const [newPhone, setNewPhone] = useState('');
+    const [error, setError] = useState('');
+
+    // Load from localStorage on mount
+    useEffect(() => {
+        try {
+            const storedContacts = localStorage.getItem('emergencyContacts');
+            if (storedContacts) {
+                setContacts(JSON.parse(storedContacts));
+            }
+        } catch (e) {
+            console.error("Failed to parse emergency contacts from localStorage", e);
+        }
+    }, []);
+
+    // Save to localStorage on change
+    useEffect(() => {
+        localStorage.setItem('emergencyContacts', JSON.stringify(contacts));
+    }, [contacts]);
+
+    const handleAddContact = () => {
+        if (!newName.trim() || !newPhone.trim()) {
+            setError('Name and phone number cannot be empty.');
+            return;
+        }
+        setContacts([...contacts, { name: newName.trim(), phone: newPhone.trim() }]);
+        setNewName('');
+        setNewPhone('');
+        setError('');
+        setIsAdding(false);
+    };
+
+    const handleRemoveContact = (indexToRemove: number) => {
+        setContacts(contacts.filter((_, index) => index !== indexToRemove));
+    };
+
+    return (
+        <div className="px-4">
+            <div className="bg-blue-900/30 border border-blue-500/50 rounded-2xl p-4">
+                <div className="flex items-center justify-between gap-3 mb-3">
+                    <div className="flex items-center gap-3">
+                         <UserPlusIcon className="w-6 h-6 text-blue-300"/>
+                        <div>
+                            <h3 className="font-bold text-blue-200">My Emergency Contacts</h3>
+                            <p className="text-xs text-blue-300/80">Your personal safety contacts</p>
+                        </div>
+                    </div>
+                    {!isAdding && (
+                        <button 
+                            onClick={() => setIsAdding(true)}
+                            className="bg-blue-500/20 text-blue-200 px-3 py-1 rounded-full text-sm hover:bg-blue-500/40 transition-colors"
+                        >
+                            + Add
+                        </button>
+                    )}
+                </div>
+
+                {isAdding ? (
+                    <div className="space-y-3 pt-2">
+                        <input
+                            type="text"
+                            value={newName}
+                            onChange={(e) => setNewName(e.target.value)}
+                            placeholder="Contact Name (e.g., Jane Doe)"
+                            className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white placeholder-gray-500 text-sm"
+                        />
+                        <input
+                            type="tel"
+                            value={newPhone}
+                            onChange={(e) => setNewPhone(e.target.value)}
+                            placeholder="Phone Number (e.g., +1 555 1234)"
+                            className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white placeholder-gray-500 text-sm"
+                        />
+                        {error && <p className="text-xs text-red-400">{error}</p>}
+                        <div className="flex gap-2 justify-end">
+                            <button onClick={() => { setIsAdding(false); setError(''); }} className="bg-gray-700/80 px-4 py-1.5 rounded-md text-sm">Cancel</button>
+                            <button onClick={handleAddContact} className="bg-blue-500 px-4 py-1.5 rounded-md text-sm text-black font-semibold">Save</button>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="space-y-2">
+                        {contacts.length === 0 ? (
+                            <div className="text-center py-4 text-sm text-gray-400">
+                                <p>No contacts added yet.</p>
+                                <p>Add your first emergency contact for peace of mind.</p>
+                            </div>
+                        ) : (
+                            contacts.map((contact, index) => (
+                                <div key={index} className="bg-gray-800/50 p-3 rounded-lg flex justify-between items-center">
+                                    <div>
+                                        <p className="font-semibold text-gray-200">{contact.name}</p>
+                                        <a href={`tel:${contact.phone}`} className="text-sm text-teal-400 hover:underline">{contact.phone}</a>
+                                    </div>
+                                    <button 
+                                        onClick={() => handleRemoveContact(index)}
+                                        className="text-gray-500 hover:text-red-400 p-1"
+                                        aria-label={`Remove ${contact.name}`}
+                                    >
+                                        <TrashIcon className="w-5 h-5" />
+                                    </button>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
 const Stats: React.FC = () => (
     <div className="p-4 grid grid-cols-3 gap-4">
         <div className="bg-[#1C1C1E] border border-gray-800 p-3 rounded-2xl text-center">
@@ -133,10 +305,27 @@ const Stats: React.FC = () => (
     </div>
 );
 
-const DestinationCard: React.FC<{dest: Omit<Destination, 'id'>; onClick: () => void}> = ({ dest, onClick }) => (
+const DestinationCard: React.FC<{dest: Omit<Destination, 'id'>; onClick: () => void; onImageClick: () => void;}> = ({ dest, onClick, onImageClick }) => (
     <button onClick={onClick} className="bg-[#1C1C1E] border border-gray-800 rounded-2xl overflow-hidden w-full text-left hover:border-teal-500/50 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-teal-500">
-        <div className="relative">
-            <img src={dest.image} alt={dest.name} className="w-full h-40 object-cover"/>
+        <div className="relative group">
+            <img 
+                src={dest.image} 
+                alt={dest.name} 
+                className="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-300"
+                onClick={(e) => {
+                    e.stopPropagation(); // Prevent card's onClick from firing
+                    onImageClick();
+                }}
+            />
+             <div
+                onClick={(e) => {
+                    e.stopPropagation();
+                    onImageClick();
+                }} 
+                className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center cursor-pointer"
+            >
+                <SearchIcon className="w-8 h-8 text-white/80" />
+            </div>
             <div className="absolute top-2 right-2 flex gap-2">
                 {dest.tags.includes('Trending') && <span className="text-xs bg-cyan-500/20 text-cyan-300 px-2 py-1 rounded-full border border-cyan-500/50">📈 Trending</span>}
                 {dest.tags.includes('AI Pick') && <span className="text-xs bg-yellow-500/20 text-yellow-300 px-2 py-1 rounded-full border border-yellow-500/50">✨ AI Pick</span>}
@@ -149,6 +338,18 @@ const DestinationCard: React.FC<{dest: Omit<Destination, 'id'>; onClick: () => v
             <p className="text-sm text-gray-300 mt-2 leading-relaxed">{dest.description}</p>
         </div>
     </button>
+);
+
+const DestinationCardSkeleton: React.FC = () => (
+    <div className="bg-[#1C1C1E] border border-gray-800 rounded-2xl overflow-hidden w-full">
+        <div className="w-full h-40 bg-gray-700 animate-pulse"></div>
+        <div className="p-4 space-y-2">
+            <div className="h-6 w-3/4 bg-gray-700 rounded animate-pulse"></div>
+            <div className="h-4 w-1/2 bg-gray-700 rounded animate-pulse"></div>
+            <div className="h-4 w-full bg-gray-700 rounded animate-pulse mt-2"></div>
+            <div className="h-4 w-5/6 bg-gray-700 rounded animate-pulse"></div>
+        </div>
+    </div>
 );
 
 const SearchResultsModal: React.FC<{ result: SearchResult | null; onClose: () => void }> = ({ result, onClose }) => {
@@ -254,64 +455,212 @@ const DestinationDetailModal: React.FC<{ destination: Omit<Destination, 'id'> | 
     );
 };
 
+const ImageZoomModal: React.FC<{ imageUrl: string | null; onClose: () => void }> = ({ imageUrl, onClose }) => {
+    if (!imageUrl) return null;
+
+    return (
+        <div 
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-fadeIn"
+            onClick={onClose}
+            role="dialog"
+            aria-modal="true"
+        >
+            <img 
+                src={imageUrl} 
+                alt="Zoomed destination" 
+                className="max-w-[95%] max-h-[90%] object-contain rounded-lg shadow-2xl"
+                onClick={(e) => e.stopPropagation()} // Prevent closing when clicking the image
+            />
+            <button
+                onClick={onClose}
+                className="absolute top-4 right-4 bg-black/50 w-8 h-8 rounded-full text-white text-lg"
+                aria-label="Close image view"
+            >&times;</button>
+        </div>
+    );
+};
+
 const HomeScreen: React.FC = () => {
     const [searchResults, setSearchResults] = useState<SearchResult | null>(null);
     const [isSearching, setIsSearching] = useState(false);
     const [searchError, setSearchError] = useState('');
-    const [destinations, setDestinations] = useState<Omit<Destination, 'id'>[]>(initialDestinations);
+    const [destinations, setDestinations] = useState<Omit<Destination, 'id'>[]>([]);
     const [isLoadingAIDestinations, setIsLoadingAIDestinations] = useState(true);
     const [selectedDestination, setSelectedDestination] = useState<Omit<Destination, 'id'> | null>(null);
+    const [zoomedImage, setZoomedImage] = useState<string | null>(null);
     
+    // State for new dynamic features & search
+    const [searchQuery, setSearchQuery] = useState('');
+    const [dynamicHero, setDynamicHero] = useState<DynamicHeroContent | null>(null);
+    const [travelTip, setTravelTip] = useState<string | null>(null);
+    const [isLoadingDynamicContent, setIsLoadingDynamicContent] = useState(true);
+    const [isListening, setIsListening] = useState(false);
+    const recognitionRef = useRef<any>(null);
+
+    const handleVoiceSearch = () => {
+        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+            alert("Sorry, your browser doesn't support speech recognition.");
+            return;
+        }
+
+        if (isListening) {
+            recognitionRef.current?.stop();
+            return;
+        }
+
+        const recognition = new SpeechRecognition();
+        recognitionRef.current = recognition;
+        recognition.lang = 'en-US';
+        recognition.continuous = false;
+        recognition.interimResults = false;
+
+        recognition.onstart = () => {
+            setIsListening(true);
+        };
+
+        recognition.onresult = (event: any) => {
+            const transcript = event.results[0][0].transcript;
+            setSearchQuery(transcript);
+        };
+
+        recognition.onerror = (event: any) => {
+            console.error('Speech recognition error:', event.error);
+            setIsListening(false);
+        };
+
+        recognition.onend = () => {
+            setIsListening(false);
+            recognitionRef.current = null;
+        };
+
+        recognition.start();
+    };
+
+
+    const handleSearch = async () => {
+        if (!searchQuery.trim()) return;
+        setIsSearching(true);
+        setSearchError('');
+        try {
+            const response = await getAiSearchGroundedResponse(searchQuery);
+            const groundingMetadata = response.candidates?.[0]?.groundingMetadata;
+            setSearchResults({
+                text: response.text,
+                sources: groundingMetadata?.groundingChunks || [],
+            });
+        } catch (error) {
+            console.error("Search failed:", error);
+            setSearchError("Sorry, the AI search failed. Please try again.");
+        } finally {
+            setIsSearching(false);
+        }
+    };
+    
+    const handleCategoryClick = (category: string) => {
+        setSearchQuery(category);
+        handleSearch();
+    };
+
+    const handleFilterClick = (append: string) => {
+        setSearchQuery(prev => (prev.trim() + ' ' + append).trim());
+    };
+
     useEffect(() => {
-        const fetchAIDestinations = async () => {
+        const fetchDynamicContent = async () => {
+            setIsLoadingDynamicContent(true);
             try {
-                const existingNames = destinations.map(d => d.name);
-                const newDestinations = await getAIFeaturedDestinations(existingNames);
-                setDestinations(prevDests => [...prevDests, ...newDestinations]);
+                const [heroContent, tip] = await Promise.all([
+                    getDynamicHeroContent(),
+                    getTravelTip(),
+                ]);
+                setDynamicHero(heroContent);
+                setTravelTip(tip);
+            } catch (error) {
+                console.error("Failed to fetch dynamic hero/tip:", error);
+            } finally {
+                setIsLoadingDynamicContent(false);
+            }
+        };
+
+        const fetchAIDestinations = async () => {
+            setIsLoadingAIDestinations(true);
+            try {
+                // The service now returns a full list of destinations with AI-generated images
+                const newDestinations = await getAIFeaturedDestinations(3);
+                setDestinations(newDestinations);
             } catch (error) {
                 console.error("Failed to fetch AI destinations:", error);
-                // Fail gracefully, the initial destinations will still be shown
             } finally {
                 setIsLoadingAIDestinations(false);
             }
         };
 
+        fetchDynamicContent();
         fetchAIDestinations();
-    }, []); // Empty dependency array ensures this runs only once on mount
+    }, []);
 
     return (
         <>
-            <div className="w-full h-full text-white space-y-4">
-                <Header />
-                <DiscoverSection />
+            <div className="w-full text-white space-y-4 pb-4">
+                <PersonalizedHeader name="John" />
+                <DynamicDiscoverSection content={dynamicHero} isLoading={isLoadingDynamicContent} />
                 <SearchBar 
-                    onSearch={setSearchResults} 
-                    onLoading={setIsSearching}
-                    onError={setSearchError}
+                    query={searchQuery} 
+                    onQueryChange={setSearchQuery} 
+                    onSearch={handleSearch}
+                    onVoiceClick={handleVoiceSearch}
+                    isListening={isListening}
                 />
-                {isSearching && <div className="text-center p-4">🔎 Searching with AI...</div>}
-                {searchError && <div className="text-center p-4 text-red-400">{searchError}</div>}
-                <Categories />
-                <EmergencyCard />
-                <Stats />
-                <div className="px-4 pb-4">
+                <SearchFilters onFilterClick={handleFilterClick} />
+
+                {isSearching && <div className="text-center px-4 -my-2 text-sm text-gray-400">🔎 Searching with AI...</div>}
+                {searchError && <div className="text-center px-4 -my-2 text-sm text-red-400">{searchError}</div>}
+                
+                <TravelTipCard tip={travelTip} isLoading={isLoadingDynamicContent} />
+                <Categories onCategoryClick={setSearchQuery} />
+                
+                <div className="px-4 pt-4">
                     <div className="flex justify-between items-center mb-2">
                         <h2 className="text-xl font-bold">Featured Destinations</h2>
                         <a href="#" className="text-sm text-teal-400">View all</a>
                     </div>
-                     {isLoadingAIDestinations && (
-                        <div className="flex items-center justify-center gap-2 p-4 text-gray-400">
-                           <SparklesIcon className="w-4 h-4 animate-pulse" />
-                           <span>Generating new adventures with AI...</span>
-                        </div>
-                     )}
                     <div className="space-y-4">
-                        {destinations.map(dest => <DestinationCard key={dest.name} dest={dest} onClick={() => setSelectedDestination(dest)} />)}
+                        {isLoadingAIDestinations ? (
+                            <>
+                                <DestinationCardSkeleton />
+                                <DestinationCardSkeleton />
+                                <DestinationCardSkeleton />
+                            </>
+                        ) : (
+                           destinations.map(dest => (
+                                <DestinationCard 
+                                    key={dest.name} 
+                                    dest={dest} 
+                                    onClick={() => setSelectedDestination(dest)} 
+                                    onImageClick={() => setZoomedImage(dest.image)}
+                                />
+                            ))
+                        )}
                     </div>
                 </div>
+                
+                <Stats />
+                <EmergencyCard />
+                <CustomEmergencyContacts />
             </div>
             <SearchResultsModal result={searchResults} onClose={() => setSearchResults(null)} />
             <DestinationDetailModal destination={selectedDestination} onClose={() => setSelectedDestination(null)} />
+            <ImageZoomModal imageUrl={zoomedImage} onClose={() => setZoomedImage(null)} />
+            <style>{`
+              @keyframes fadeIn {
+                  from { opacity: 0; }
+                  to { opacity: 1; }
+              }
+              .animate-fadeIn {
+                  animation: fadeIn 0.2s ease-out forwards;
+              }
+          `}</style>
         </>
     );
 };

@@ -9,6 +9,20 @@ if (!API_KEY) {
 
 const ai = new GoogleGenAI({ apiKey: API_KEY! });
 
+// New interface for trip ideas
+export interface TripIdea {
+  title: string;
+  prompt: string;
+}
+
+// Interface for new dynamic hero
+export interface DynamicHeroContent {
+  title: string;
+  description: string;
+  image: string; // base64 string or URL
+}
+
+
 // For the chatbot - using flash-lite for low latency and streaming
 export const getAiChatResponseStream = async (
   prompt: string,
@@ -33,25 +47,21 @@ export const getAiChatResponseStream = async (
   return response;
 };
 
-// For complex itinerary planning - using pro with thinking mode
-export const planComplexTrip = async (
+// For complex itinerary planning - NOW STREAMING for much better perceived performance
+export const planComplexTripStream = async (
   prompt: string
-): Promise<string> => {
-   if (!API_KEY) return "AI service is currently unavailable. Please check API key configuration.";
-   try {
-     const response = await ai.models.generateContent({
-        model: "gemini-2.5-pro",
-        contents: prompt,
-        config: {
-          systemInstruction: "You are a world-class travel planner specializing in creating detailed, day-by-day, personalized, and logistical itineraries for trips in Nepal. Be thorough, creative, practical, and provide estimated costs and booking advice. Format the output in well-structured markdown.",
-          thinkingConfig: { thinkingBudget: 32768 } 
-        },
-      });
-      return response.text;
-   } catch (error) {
-     console.error("Error generating complex plan:", error);
-     return "Sorry, I encountered an error while planning your trip. Please try again.";
-   }
+): Promise<AsyncGenerator<GenerateContentResponse>> => {
+   if (!API_KEY) throw new Error("AI service is currently unavailable. Please check API key configuration.");
+   
+   const response = await ai.models.generateContentStream({
+      model: "gemini-2.5-pro",
+      contents: prompt,
+      config: {
+        systemInstruction: "You are a world-class travel planner specializing in creating detailed, day-by-day, personalized, and logistical itineraries for trips in Nepal. Be thorough, creative, practical, and provide estimated costs and booking advice. Format the output in well-structured markdown.",
+        thinkingConfig: { thinkingBudget: 32768 } 
+      },
+    });
+    return response;
 };
 
 // For the home screen search - using flash with search grounding
@@ -123,51 +133,19 @@ export const getDestinationDetailsStream = async (
     return response;
 };
 
-// NEW function to generate an image for a destination
-const getDestinationImage = async (
-  destinationName: string,
-  destinationDescription: string
-): Promise<string> => {
-  try {
-    const prompt = `A stunning, professional, photorealistic travel photograph of ${destinationName}, Nepal. ${destinationDescription}. High resolution, vibrant colors, capturing the essence of the location.`;
-
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-image',
-      contents: {
-        parts: [{ text: prompt }],
-      },
-      config: {
-        responseModalities: [Modality.IMAGE],
-      },
-    });
-
-    for (const part of response.candidates[0].content.parts) {
-      if (part.inlineData) {
-        const base64ImageBytes: string = part.inlineData.data;
-        return `data:image/png;base64,${base64ImageBytes}`;
-      }
-    }
-    // Fallback if no image is found in the response
-    return `https://placehold.co/400x300/0d0d0d/ffffff?text=${encodeURIComponent(destinationName)}`;
-  } catch (error) {
-    console.error(`Error generating image for ${destinationName}:`, error);
-    // Return a placeholder on error
-    return `https://placehold.co/400x300/0d0d0d/ffffff?text=${encodeURIComponent(destinationName)}`;
-  }
-};
-
-// For dynamically generating featured destinations
+// For dynamically generating featured destinations with AI images
 export const getAIFeaturedDestinations = async (
-  existingNames: string[]
+  count: number = 3
 ): Promise<Omit<Destination, 'id'>[]> => {
   if (!API_KEY) return [];
   try {
-    const prompt = `Generate a list of 2 unique and interesting travel destinations in Nepal that are NOT on this list: [${existingNames.join(', ')}].
-    For each destination, provide a name, location (district or province), a short compelling description (2-3 sentences), and an array of 1-2 relevant tags from this list: 'AI Pick', 'Hidden Gem', 'Adventure', 'Cultural', 'Nature', 'Spiritual'.`;
+    // Step 1: Generate text content for multiple destinations
+    const textPrompt = `Generate a list of ${count} diverse and interesting travel destinations in Nepal.
+    For each, provide a name, location (district or province), a short compelling description (2-3 sentences), and an array of 1-2 relevant tags from this list: 'Trending', 'AI Pick', 'Hidden Gem', 'Adventure', 'Cultural', 'Nature', 'Spiritual'.`;
 
-    const response = await ai.models.generateContent({
+    const textResponse = await ai.models.generateContent({
       model: "gemini-2.5-flash",
-      contents: prompt,
+      contents: textPrompt,
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -189,23 +167,163 @@ export const getAIFeaturedDestinations = async (
       }
     });
 
-    const jsonString = response.text.trim();
-    const newDestinationsTextData: Omit<Destination, 'id' | 'image'>[] = JSON.parse(jsonString);
+    const destinationsTextData: Omit<Destination, 'id' | 'image'>[] = JSON.parse(textResponse.text.trim());
+    if (destinationsTextData.length === 0) {
+        return [];
+    }
     
-    // Now, generate an image for each new destination in parallel
-    const destinationsWithImages = await Promise.all(
-      newDestinationsTextData.map(async (dest) => {
-        const imageUrl = await getDestinationImage(dest.name, dest.description);
-        return {
-          ...dest,
-          image: imageUrl,
-        };
-      })
-    );
+    // Step 2: Generate an image for each destination in parallel
+    const destinationPromises = destinationsTextData.map(async (destData) => {
+        try {
+            const imagePrompt = `A stunning, high-quality, photorealistic travel photograph of ${destData.name}, ${destData.location}, Nepal. The image should capture the essence of its description: "${destData.description}". Epic cinematic style with vibrant colors.`;
+            
+            const imageResponse = await ai.models.generateContent({
+              model: 'gemini-2.5-flash-image',
+              contents: { parts: [{ text: imagePrompt }] },
+              config: { responseModalities: [Modality.IMAGE] },
+            });
+            
+            let imageUrl = `https://placehold.co/400x300/0d0d0d/ffffff?text=${encodeURIComponent(destData.name)}`; // Fallback
 
-    return destinationsWithImages;
+            for (const part of imageResponse.candidates[0].content.parts) {
+              if (part.inlineData) {
+                const base64ImageBytes: string = part.inlineData.data;
+                imageUrl = `data:image/png;base64,${base64ImageBytes}`;
+                break; // Found the image, no need to continue
+              }
+            }
+            
+            return {
+                ...destData,
+                image: imageUrl,
+            };
+        } catch (imgError) {
+            console.error(`Failed to generate image for ${destData.name}:`, imgError);
+            // Return with a fallback image on individual failure, so the whole process doesn't stop.
+            return {
+                ...destData,
+                image: `https://placehold.co/400x300/0d0d0d/ffffff?text=Image+Error`
+            };
+        }
+    });
+
+    const finalDestinations = await Promise.all(destinationPromises);
+    return finalDestinations;
+
   } catch (error) {
     console.error("Error generating AI featured destinations:", error);
+    return []; // Return empty array on top-level error
+  }
+};
+
+
+// NEW function to generate trip ideas
+export const getTripIdeas = async (): Promise<TripIdea[]> => {
+  if (!API_KEY) return [];
+  try {
+    const prompt = `Generate a list of 4 diverse and creative trip ideas for tourists in Nepal. The ideas should cover different interests like adventure, culture, spirituality, and relaxation.
+    For each idea, provide a short, catchy "title" and a detailed "prompt" that a user could give to an AI travel planner. The prompt should be a complete sentence or two describing the desired trip.`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              title: { type: Type.STRING, description: "A short, catchy title for the trip idea." },
+              prompt: { type: Type.STRING, description: "A detailed prompt for the AI planner." },
+            },
+            required: ['title', 'prompt']
+          }
+        },
+      }
+    });
+
+    const jsonString = response.text.trim();
+    const newIdeas: TripIdea[] = JSON.parse(jsonString);
+    return newIdeas;
+  } catch (error) {
+    console.error("Error generating AI trip ideas:", error);
     return []; // Return empty array on error
+  }
+};
+
+// NEW function for a daily travel tip
+export const getTravelTip = async (): Promise<string> => {
+  if (!API_KEY) return "Remember to stay hydrated, especially when trekking at high altitudes.";
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: "Generate a single, short, and useful travel tip for someone visiting Nepal. Keep it under 20 words. Be creative and practical.",
+    });
+    return response.text;
+  } catch (error) {
+    console.error("Error generating travel tip:", error);
+    return "Always have a backup power bank for your electronics in remote areas.";
+  }
+};
+
+// NEW function for dynamic hero content
+export const getDynamicHeroContent = async (): Promise<DynamicHeroContent> => {
+  const fallbackContent: DynamicHeroContent = {
+    title: "Timeless Kathmandu",
+    description: "Explore the ancient heart of Nepal's capital.",
+    image: 'https://images.unsplash.com/photo-1605788485215-35990d068502?q=80&w=400&auto=format&fit=crop',
+  };
+
+  if (!API_KEY) return fallbackContent;
+
+  try {
+    // 1. Generate text content
+    const textPrompt = `Generate a captivating title, a short one-sentence description, and a detailed image prompt for a featured travel experience in Nepal. 
+    The experience should be inspiring. The image prompt should be suitable for an AI image generator to create a stunning, photorealistic, vibrant travel photograph of a real location in Nepal.`;
+    
+    const textResponse = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: textPrompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            title: { type: Type.STRING },
+            description: { type: Type.STRING },
+            photo_prompt: { type: Type.STRING },
+          },
+          required: ['title', 'description', 'photo_prompt']
+        }
+      }
+    });
+
+    const { title, description, photo_prompt } = JSON.parse(textResponse.text.trim());
+    
+    // 2. Generate image based on the prompt
+    const imageResponse = await ai.models.generateContent({
+      model: 'gemini-2.5-flash-image',
+      contents: { parts: [{ text: photo_prompt }] },
+      config: { responseModalities: [Modality.IMAGE] },
+    });
+
+    for (const part of imageResponse.candidates[0].content.parts) {
+      if (part.inlineData) {
+        const base64ImageBytes: string = part.inlineData.data;
+        return {
+          title,
+          description,
+          image: `data:image/png;base64,${base64ImageBytes}`,
+        };
+      }
+    }
+
+    // If image generation fails, return text with fallback image
+    return { ...fallbackContent, title, description };
+
+  } catch (error) {
+    console.error("Error generating dynamic hero content:", error);
+    return fallbackContent;
   }
 };
