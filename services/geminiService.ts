@@ -133,87 +133,90 @@ export const getDestinationDetailsStream = async (
     return response;
 };
 
-// For dynamically generating featured destinations with AI images
+// For dynamically generating featured destinations with fixed images
 export const getAIFeaturedDestinations = async (
   count: number = 3
 ): Promise<Omit<Destination, 'id'>[]> => {
-  if (!API_KEY) return [];
-  try {
-    // Step 1: Generate text content for multiple destinations
-    const textPrompt = `Generate a list of ${count} diverse and interesting travel destinations in Nepal.
-    For each, provide a name, location (district or province), a short compelling description (2-3 sentences), and an array of 1-2 relevant tags from this list: 'Trending', 'AI Pick', 'Hidden Gem', 'Adventure', 'Cultural', 'Nature', 'Spiritual'.`;
-
-    const textResponse = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: textPrompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.ARRAY,
-          items: {
-            type: Type.OBJECT,
-            properties: {
-              name: { type: Type.STRING },
-              location: { type: Type.STRING },
-              description: { type: Type.STRING },
-              tags: {
-                type: Type.ARRAY,
-                items: { type: Type.STRING }
-              }
-            },
-            required: ['name', 'location', 'description', 'tags']
-          }
-        },
-      }
-    });
-
-    const destinationsTextData: Omit<Destination, 'id' | 'image'>[] = JSON.parse(textResponse.text.trim());
-    if (destinationsTextData.length === 0) {
-        return [];
+  // Return fixed destinations with permanent images, randomized on each call
+  const fixedDestinations: Omit<Destination, 'id'>[] = [
+    {
+      name: 'Mount Everest',
+      location: 'Solukhumbu',
+      description: 'The highest peak in the world, offering breathtaking views and world-class trekking experiences.',
+      image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop',
+      tags: ['Trending', 'Adventure']
+    },
+    {
+      name: 'Pokhara',
+      location: 'Gandaki Province',
+      description: 'A paradise surrounded by lakes, mountains, and cultural heritage, perfect for peace and adventure.',
+      image: 'https://images.unsplash.com/photo-1601439678777-b2b3c56fa627?w=400&h=300&fit=crop',
+      tags: ['Trending', 'Nature']
+    },
+    {
+      name: 'Kathmandu Durbar Square',
+      location: 'Kathmandu Valley',
+      description: 'Ancient palaces, temples, and cultural monuments representing centuries of Nepalese history.',
+      image: 'https://images.unsplash.com/photo-1544631189-2d63d4c2f420?w=400&h=300&fit=crop',
+      tags: ['Cultural', 'Spiritual']
+    },
+    {
+      name: 'Annapurna Circuit',
+      location: 'Annapurna Region',
+      description: 'One of the world\'s best trekking routes, offering stunning mountain views and diverse landscapes.',
+      image: 'https://images.unsplash.com/photo-1582213782178-e0d53f98f2ca?w=400&h=300&fit=crop',
+      tags: ['Adventure', 'Nature']
+    },
+    {
+      name: 'Lumbini',
+      location: 'Lumbini Province',
+      description: 'The sacred birthplace of Lord Buddha, a place of peace and spiritual enlightenment.',
+      image: 'https://images.unsplash.com/photo-1599042168150-eaa9f21ac2ac?w=400&h=300&fit=crop',
+      tags: ['Spiritual', 'Cultural']
+    },
+    {
+      name: 'Bhaktapur',
+      location: 'Kathmandu Valley',
+      description: 'A living museum showcasing medieval art, architecture, and the traditional lifestyle of Nepal.',
+      image: 'https://images.unsplash.com/photo-1606235459996-1cfb350450b7?w=400&h=300&fit=crop',
+      tags: ['Cultural', 'Hidden Gem']
+    },
+    {
+      name: 'Chitwan National Park',
+      location: 'Chitwan District',
+      description: 'Home to the one-horned rhinoceros and Bengal tiger, offering unique wildlife experiences.',
+      image: 'https://images.unsplash.com/photo-1564419376916-9b509edccae6?w=400&h=300&fit=crop',
+      tags: ['Adventure', 'Nature']
+    },
+    {
+      name: 'Pashupatinath Temple',
+      location: 'Kathmandu Valley',
+      description: 'A UNESCO World Heritage Site and one of the most sacred Hindu temples, along the Bagmati River.',
+      image: 'https://images.unsplash.com/photo-1544558445-5ff04610463f?w=400&h=300&fit=crop',
+      tags: ['Spiritual', 'Cultural', 'Trending']
+    },
+    {
+      name: 'Nagarkot',
+      location: 'Bagmati Province',
+      description: 'A hill station famous for stunning sunrise views over the Himalayan range including Everest.',
+      image: 'https://images.unsplash.com/photo-1589308078059-be1415eab4c3?w=400&h=300&fit=crop',
+      tags: ['Nature', 'Adventure']
+    },
+    {
+      name: 'Swayambhunath Stupa',
+      location: 'Kathmandu Valley',
+      description: 'The Monkey Temple, an ancient religious complex atop a hill overlooking Kathmandu.',
+      image: 'https://images.unsplash.com/photo-1606235459996-1cfb350450b7?w=400&h=300&fit=crop',
+      tags: ['Spiritual', 'Cultural']
     }
-    
-    // Step 2: Generate an image for each destination in parallel
-    const destinationPromises = destinationsTextData.map(async (destData) => {
-        try {
-            const imagePrompt = `A stunning, high-quality, photorealistic travel photograph of ${destData.name}, ${destData.location}, Nepal. The image should capture the essence of its description: "${destData.description}". Epic cinematic style with vibrant colors.`;
-            
-            const imageResponse = await ai.models.generateContent({
-              model: 'gemini-2.5-flash-image',
-              contents: { parts: [{ text: imagePrompt }] },
-              config: { responseModalities: [Modality.IMAGE] },
-            });
-            
-            let imageUrl = `https://placehold.co/400x300/0d0d0d/ffffff?text=${encodeURIComponent(destData.name)}`; // Fallback
+  ];
 
-            for (const part of imageResponse.candidates[0].content.parts) {
-              if (part.inlineData) {
-                const base64ImageBytes: string = part.inlineData.data;
-                imageUrl = `data:image/png;base64,${base64ImageBytes}`;
-                break; // Found the image, no need to continue
-              }
-            }
-            
-            return {
-                ...destData,
-                image: imageUrl,
-            };
-        } catch (imgError) {
-            console.error(`Failed to generate image for ${destData.name}:`, imgError);
-            // Return with a fallback image on individual failure, so the whole process doesn't stop.
-            return {
-                ...destData,
-                image: `https://placehold.co/400x300/0d0d0d/ffffff?text=Image+Error`
-            };
-        }
-    });
+  // Shuffle the array to get random destinations
+  const shuffled = [...fixedDestinations].sort(() => Math.random() - 0.5);
 
-    const finalDestinations = await Promise.all(destinationPromises);
-    return finalDestinations;
-
-  } catch (error) {
-    console.error("Error generating AI featured destinations:", error);
-    return []; // Return empty array on top-level error
-  }
+  // Return the requested number of destinations (or all if count exceeds available)
+  const actualCount = Math.min(count, shuffled.length);
+  return shuffled.slice(0, actualCount);
 };
 
 

@@ -40,15 +40,37 @@ export interface Itinerary {
 }
 
 export interface FeedPost {
-  id: number;
+  id: string;
   author: string;
   authorAvatar: string;
   location: string;
-  image: string;
+  image?: string;
   caption: string;
-  likes: number;
-  comments: number;
+  likes: string[]; // Array of user IDs who liked the post
+  comments: Comment[];
   timestamp: string;
+  postType: 'text' | 'photo' | 'news';
+  tags?: string[];
+}
+
+export interface Comment {
+  id: string;
+  author: string;
+  authorAvatar: string;
+  text: string;
+  timestamp: string;
+  likes: string[];
+}
+
+export interface UserProfile {
+  uid: string;
+  username: string;
+  displayName: string;
+  photoURL: string;
+  bio: string;
+  followers: string[];
+  following: string[];
+  posts: string[];
 }
 
 export interface Place {
@@ -62,28 +84,4 @@ export interface Place {
 export interface ChatMessage {
   role: 'user' | 'model';
   text: string;
-}
-
-// Added GroundingChunk type for reuse
-export interface GroundingChunk {
-    web?: {
-        uri: string;
-        title: string;
-    };
-    maps?: {
-        uri: string;
-        title: string;
-        placeAnswerSources?: {
-            reviewSnippets: {
-                uri: string;
-                title: string;
-                text: string;
-            }[];
-        }[]
-    }
-}
-
-export interface SearchResult {
-    text: string;
-    sources: GroundingChunk[];
 }

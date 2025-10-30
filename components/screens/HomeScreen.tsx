@@ -1,7 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { SearchIcon, MicIcon, PhoneIcon, AlertIcon, SparklesIcon, LightbulbIcon, UserPlusIcon, TrashIcon, DollarSignIcon, CalendarIcon, UsersIcon, PlannerIcon } from '../Icons';
+import { GroundingChunk } from '@google/genai';
 import { getAiSearchGroundedResponse, getDestinationDetailsStream, getAIFeaturedDestinations, getTravelTip, getDynamicHeroContent, DynamicHeroContent } from '../../services/geminiService';
-import { SearchResult, Destination } from '../../types';
+import { Destination } from '../../types';
+
+interface SearchResult {
+    text: string;
+    sources: GroundingChunk[];
+}
 
 interface EmergencyContact {
     name: string;

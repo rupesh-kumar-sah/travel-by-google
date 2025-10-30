@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { findNearbyPlaces } from '../../services/geminiService';
-import { GroundingChunk } from '../../types';
+import { GroundingChunk } from '@google/genai';
 import { ChevronDownIcon, ExternalLinkIcon } from '../Icons';
 
 const MapScreen: React.FC = () => {
