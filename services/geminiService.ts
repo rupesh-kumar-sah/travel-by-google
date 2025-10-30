@@ -1,5 +1,5 @@
-import { GoogleGenAI, GenerateContentResponse, Chat } from "@google/genai";
-import { ChatMessage } from '../types';
+import { GoogleGenAI, GenerateContentResponse, Chat, Type, Modality } from "@google/genai";
+import { ChatMessage, Destination } from '../types';
 
 const API_KEY = process.env.API_KEY;
 
@@ -8,6 +8,20 @@ if (!API_KEY) {
 }
 
 const ai = new GoogleGenAI({ apiKey: API_KEY! });
+
+// New interface for trip ideas
+export interface TripIdea {
+  title: string;
+  prompt: string;
+}
+
+// Interface for new dynamic hero
+export interface DynamicHeroContent {
+  title: string;
+  description: string;
+  image: string; // base64 string or URL
+}
+
 
 // For the chatbot - using flash-lite for low latency and streaming
 export const getAiChatResponseStream = async (
@@ -118,7 +132,6 @@ export const getDestinationDetailsStream = async (
     });
     return response;
 };
-<<<<<<< HEAD
 
 // For dynamically generating featured destinations with fixed images
 export const getAIFeaturedDestinations = async (
@@ -317,5 +330,3 @@ export const getDynamicHeroContent = async (): Promise<DynamicHeroContent> => {
     return fallbackContent;
   }
 };
-=======
->>>>>>> 280f9c0aab879c1bb04ce2f36f1e15ac7d888e31

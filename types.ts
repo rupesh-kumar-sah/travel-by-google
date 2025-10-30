@@ -40,37 +40,15 @@ export interface Itinerary {
 }
 
 export interface FeedPost {
-  id: string;
+  id: number;
   author: string;
   authorAvatar: string;
   location: string;
-  image?: string;
+  image: string;
   caption: string;
-  likes: string[]; // Array of user IDs who liked the post
-  comments: Comment[];
+  likes: number;
+  comments: number;
   timestamp: string;
-  postType: 'text' | 'photo' | 'news';
-  tags?: string[];
-}
-
-export interface Comment {
-  id: string;
-  author: string;
-  authorAvatar: string;
-  text: string;
-  timestamp: string;
-  likes: string[];
-}
-
-export interface UserProfile {
-  uid: string;
-  username: string;
-  displayName: string;
-  photoURL: string;
-  bio: string;
-  followers: string[];
-  following: string[];
-  posts: string[];
 }
 
 export interface Place {
@@ -84,17 +62,4 @@ export interface Place {
 export interface ChatMessage {
   role: 'user' | 'model';
   text: string;
-}
-
-// Moved from geminiService.ts
-export interface TripIdea {
-  title: string;
-  prompt: string;
-}
-
-// Moved from geminiService.ts
-export interface DynamicHeroContent {
-  title: string;
-  description: string;
-  image: string; // base64 string or URL
 }
