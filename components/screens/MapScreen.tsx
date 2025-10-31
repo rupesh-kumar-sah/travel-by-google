@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { findNearbyPlaces } from '../../services/geminiService';
-import { GroundingChunk } from '@google/genai';
+import { GroundingChunk } from '../../types';
 import { ChevronDownIcon, ExternalLinkIcon } from '../Icons';
 
 const MapScreen: React.FC = () => {
@@ -60,22 +60,22 @@ const MapScreen: React.FC = () => {
     return (
         <div className="p-4 space-y-4">
             <h1 className="text-2xl font-bold">Map & Nearby Places</h1>
-            <p className="text-gray-400">Discover points of interest around you, powered by AI.</p>
+            <p className="text-gray-500 dark:text-gray-400">Discover points of interest around you, powered by AI.</p>
             
             <div className="flex flex-wrap gap-2">
                 {categories.map(cat => (
                     <button 
                         key={cat} 
                         onClick={() => handleSearch(cat)}
-                        className={`px-4 py-2 rounded-full text-sm capitalize transition-colors ${activeCategory === cat ? 'bg-teal-500 text-black font-semibold' : 'bg-gray-800 text-gray-300 border border-gray-700 hover:bg-gray-700'}`}
+                        className={`px-4 py-2 rounded-full text-sm capitalize transition-colors ${activeCategory === cat ? 'bg-teal-500 text-black font-semibold' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
                     >
                         {cat}
                     </button>
                 ))}
             </div>
 
-            {loading && <div className="text-center p-8 text-gray-400">Searching for nearby {activeCategory}...</div>}
-            {error && <div className="text-center p-8 text-red-400">{error}</div>}
+            {loading && <div className="text-center p-8 text-gray-500 dark:text-gray-400">Searching for nearby {activeCategory}...</div>}
+            {error && <div className="text-center p-8 text-red-500 dark:text-red-400">{error}</div>}
 
             <div className="space-y-3">
                 {places.map((place, index) => {
@@ -85,24 +85,24 @@ const MapScreen: React.FC = () => {
                     const isSelected = selectedPlaceId === placeId;
 
                     return (
-                        <div key={placeId} className="bg-[#1C1C1E] border border-gray-800 rounded-2xl overflow-hidden transition-all duration-300">
+                        <div key={placeId} className="bg-white dark:bg-[#1C1C1E] border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden transition-all duration-300">
                             <button
                                 onClick={() => setSelectedPlaceId(isSelected ? null : placeId)}
                                 className="w-full text-left p-4 flex justify-between items-center"
                                 aria-expanded={isSelected}
                                 aria-controls={`place-details-${index}`}
                             >
-                                <h3 className="font-bold text-lg text-teal-300 pr-2">{mapData.title}</h3>
+                                <h3 className="font-bold text-lg text-teal-700 dark:text-teal-300 pr-2">{mapData.title}</h3>
                                 <ChevronDownIcon className={`flex-shrink-0 w-5 h-5 text-gray-400 transform transition-transform duration-300 ${isSelected ? 'rotate-180' : ''}`} />
                             </button>
 
                             {isSelected && (
                                 <div 
                                     id={`place-details-${index}`}
-                                    className="px-4 pb-4 pt-2 border-t border-gray-700/50 space-y-3 animate-fadeIn"
+                                    className="px-4 pb-4 pt-2 border-t border-gray-200 dark:border-gray-700/50 space-y-3 animate-fadeIn"
                                 >
                                     {mapData.placeAnswerSources?.[0]?.reviewSnippets?.[0]?.text ? (
-                                        <p className="text-sm text-gray-400 italic">
+                                        <p className="text-sm text-gray-500 dark:text-gray-400 italic">
                                             "{mapData.placeAnswerSources[0].reviewSnippets[0].text}"
                                         </p>
                                     ) : (
@@ -112,7 +112,7 @@ const MapScreen: React.FC = () => {
                                         href={mapData.uri}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="inline-flex items-center gap-2 text-sm text-cyan-400 hover:underline font-semibold"
+                                        className="inline-flex items-center gap-2 text-sm text-cyan-600 dark:text-cyan-400 hover:underline font-semibold"
                                     >
                                         View on Map <ExternalLinkIcon className="w-4 h-4" />
                                     </a>

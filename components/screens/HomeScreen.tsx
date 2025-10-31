@@ -1,18 +1,45 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { SearchIcon, MicIcon, PhoneIcon, AlertIcon, SparklesIcon, LightbulbIcon, UserPlusIcon, TrashIcon, DollarSignIcon, CalendarIcon, UsersIcon, PlannerIcon } from '../Icons';
-import { GroundingChunk } from '@google/genai';
-import { getAiSearchGroundedResponse, getDestinationDetailsStream, getAIFeaturedDestinations, getTravelTip, getDynamicHeroContent, DynamicHeroContent } from '../../services/geminiService';
-import { Destination } from '../../types';
-
-interface SearchResult {
-    text: string;
-    sources: GroundingChunk[];
-}
+import { getAiSearchGroundedResponse, getDestinationDetailsStream } from '../../services/geminiService';
+import { SearchResult, Destination, DynamicHeroContent } from '../../types';
 
 interface EmergencyContact {
     name: string;
     phone: string;
 }
+
+const staticHeroContent: DynamicHeroContent = {
+    title: "Discover Annapurna",
+    description: "Trek through stunning landscapes to the base of the world's 10th highest peak.",
+    image: 'https://images.unsplash.com/photo-1519794206461-cccd885bf209?q=80&w=400&auto=format&fit=crop',
+};
+
+const staticTravelTip = "Pack layers! The weather in the mountains can change in an instant.";
+
+const staticDestinations: Omit<Destination, 'id'>[] = [
+    {
+        name: 'Poon Hill Trek',
+        location: 'Gandaki Province',
+        description: 'A relatively easy trek offering some of the most spectacular mountain scenery in the Annapurna region.',
+        image: 'https://images.unsplash.com/photo-1542392084-566d4847314a?q=80&w=400&auto=format&fit=crop',
+        tags: ['Trending', 'Nature'],
+    },
+    {
+        name: 'Bhaktapur Durbar Square',
+        location: 'Kathmandu Valley',
+        description: "A UNESCO World Heritage site, showcasing the valley's rich medieval art, architecture, and culture.",
+        image: 'https://images.unsplash.com/photo-1589139201199-a417b1b9e0f3?q=80&w=400&auto=format&fit=crop',
+        tags: ['Cultural', 'AI Pick'],
+    },
+    {
+        name: 'Chitwan National Park',
+        location: 'Terai Region',
+        description: 'Explore the lush jungles and spot rare wildlife, including one-horned rhinos and Bengal tigers.',
+        image: 'https://images.unsplash.com/photo-1569809319801-713905bfedc7?q=80&w=400&auto=format&fit=crop',
+        tags: ['Adventure', 'Hidden Gem'],
+    }
+];
+
 
 const PersonalizedHeader: React.FC<{ name: string }> = ({ name }) => {
     const [greeting, setGreeting] = useState('');
@@ -27,12 +54,12 @@ const PersonalizedHeader: React.FC<{ name: string }> = ({ name }) => {
     return (
         <div className="p-4 flex justify-between items-center">
             <div>
-                <h1 className="text-xl font-bold text-white">{greeting}, {name}</h1>
-                <p className="text-sm text-gray-400">Let's plan your next adventure!</p>
+                <h1 className="text-xl font-bold text-gray-900 dark:text-white">{greeting}, {name}</h1>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Let's plan your next adventure!</p>
             </div>
-            <div className="flex items-center gap-2 p-2 bg-gray-800/50 rounded-full border border-gray-700">
+            <div className="flex items-center gap-2 p-2 bg-gray-100 dark:bg-gray-800/50 rounded-full border border-gray-200 dark:border-gray-700">
                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                <span className="text-sm text-gray-300">AI Connected</span>
+                <span className="text-sm text-gray-700 dark:text-gray-300">AI Connected</span>
             </div>
         </div>
     );
@@ -42,7 +69,7 @@ const DynamicDiscoverSection: React.FC<{ content: DynamicHeroContent | null; isL
     if (isLoading || !content) {
         return (
             <div className="p-4 pt-0">
-                <div className="h-48 rounded-2xl bg-gray-800 animate-pulse"></div>
+                <div className="h-48 rounded-2xl bg-gray-200 dark:bg-gray-800 animate-pulse"></div>
             </div>
         );
     }
@@ -72,14 +99,14 @@ const TravelTipCard: React.FC<{ tip: string | null; isLoading: boolean }> = ({ t
 
     return (
          <div className="px-4">
-             <div className="bg-teal-900/50 border border-teal-500/30 rounded-2xl p-3 flex items-start gap-3">
-                 <div className="text-yellow-300 mt-0.5"><LightbulbIcon className="w-5 h-5"/></div>
+             <div className="bg-teal-50 dark:bg-teal-900/50 border border-teal-500/30 rounded-2xl p-3 flex items-start gap-3">
+                 <div className="text-yellow-500 dark:text-yellow-300 mt-0.5"><LightbulbIcon className="w-5 h-5"/></div>
                  <div className="flex-1">
-                     <p className="text-sm font-semibold text-teal-200">AI Travel Tip</p>
+                     <p className="text-sm font-semibold text-teal-800 dark:text-teal-200">AI Travel Tip</p>
                      {isLoading ? (
-                        <div className="h-4 w-3/4 bg-gray-700/50 rounded mt-1 animate-pulse"></div>
+                        <div className="h-4 w-3/4 bg-gray-300 dark:bg-gray-700/50 rounded mt-1 animate-pulse"></div>
                      ) : (
-                        <p className="text-xs text-gray-300">{tip}</p>
+                        <p className="text-xs text-gray-600 dark:text-gray-300">{tip}</p>
                      )}
                  </div>
                  <button onClick={() => setIsVisible(false)} className="text-gray-500 text-lg leading-none -mt-1">&times;</button>
@@ -104,7 +131,7 @@ const SearchBar: React.FC<{
                 onChange={(e) => onQueryChange(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && onSearch()}
                 placeholder={isListening ? "Listening..." : "AI-powered search: 'trekking', 'temples'..."}
-                className="w-full bg-[#1C1C1E] border border-gray-700 rounded-full py-3 pl-12 pr-12 text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                className="w-full bg-white dark:bg-[#1C1C1E] border border-gray-300 dark:border-gray-700 rounded-full py-3 pl-12 pr-12 text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
             />
             <button onClick={onVoiceClick} className="absolute right-8 top-1/2 -translate-y-1/2" aria-label="Voice search">
                 <MicIcon className={`w-5 h-5 transition-colors ${isListening ? 'text-teal-400 animate-pulse' : 'text-gray-400'}`}/>
@@ -123,13 +150,13 @@ const SearchFilters: React.FC<{ onFilterClick: (append: string) => void }> = ({ 
 
     return (
         <div className="px-4">
-            <p className="text-xs text-gray-400 mb-2 ml-1">Refine with AI:</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 ml-1">Refine with AI:</p>
             <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
                 {filters.map(filter => (
                     <button
                         key={filter.label}
                         onClick={() => onFilterClick(filter.append)}
-                        className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-gray-800 text-gray-300 rounded-full text-xs border border-gray-700 hover:bg-teal-500/20 hover:text-teal-300 transition-colors"
+                        className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-full text-xs border border-gray-200 dark:border-gray-700 hover:bg-teal-500/20 hover:text-teal-600 dark:hover:text-teal-300 transition-colors"
                     >
                         {filter.icon}
                         <span>{filter.label}</span>
@@ -150,7 +177,7 @@ const Categories: React.FC<{ onCategoryClick: (category: string) => void }> = ({
                      <button 
                         key={cat}
                         onClick={() => onCategoryClick(cat)}
-                        className="px-4 py-2 bg-gray-800 text-gray-300 rounded-full text-sm border border-gray-700 flex-shrink-0 hover:bg-teal-500/20 hover:text-teal-300 transition-colors"
+                        className="px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-full text-sm border border-gray-200 dark:border-gray-700 flex-shrink-0 hover:bg-teal-500/20 hover:text-teal-600 dark:hover:text-teal-300 transition-colors"
                      >
                          {cat}
                      </button>
@@ -163,18 +190,18 @@ const Categories: React.FC<{ onCategoryClick: (category: string) => void }> = ({
 
 const EmergencyCard: React.FC = () => (
     <div className="px-4">
-        <div className="bg-red-900/30 border border-red-500/50 rounded-2xl p-4">
+        <div className="bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-500/50 rounded-2xl p-4">
             <div className="flex items-center gap-3 mb-3">
-                <AlertIcon className="w-6 h-6 text-red-400"/>
+                <AlertIcon className="w-6 h-6 text-red-600 dark:text-red-400"/>
                 <div>
-                    <h3 className="font-bold text-red-300">Emergency & Safety</h3>
-                    <p className="text-xs text-red-400/80">Quick access to essential services</p>
+                    <h3 className="font-bold text-red-800 dark:text-red-300">Emergency & Safety</h3>
+                    <p className="text-xs text-red-600 dark:text-red-400/80">Quick access to essential services</p>
                 </div>
             </div>
             <div className="grid grid-cols-3 gap-2 text-center text-sm">
-                <a href="tel:100" className="bg-gray-800/50 p-2 rounded-lg flex flex-col items-center gap-1"><PhoneIcon className="w-4 h-4"/> Police: 100</a>
-                <a href="tel:102" className="bg-gray-800/50 p-2 rounded-lg flex flex-col items-center gap-1"><PhoneIcon className="w-4 h-4"/> Ambulance: 102</a>
-                <div className="bg-gray-800/50 p-2 rounded-lg flex flex-col items-center gap-1"><PhoneIcon className="w-4 h-4"/> Tourist Police</div>
+                <a href="tel:100" className="bg-white/50 dark:bg-gray-800/50 p-2 rounded-lg flex flex-col items-center gap-1"><PhoneIcon className="w-4 h-4"/> Police: 100</a>
+                <a href="tel:102" className="bg-white/50 dark:bg-gray-800/50 p-2 rounded-lg flex flex-col items-center gap-1"><PhoneIcon className="w-4 h-4"/> Ambulance: 102</a>
+                <div className="bg-white/50 dark:bg-gray-800/50 p-2 rounded-lg flex flex-col items-center gap-1"><PhoneIcon className="w-4 h-4"/> Tourist Police</div>
             </div>
         </div>
     </div>
@@ -222,19 +249,19 @@ const CustomEmergencyContacts: React.FC = () => {
 
     return (
         <div className="px-4">
-            <div className="bg-blue-900/30 border border-blue-500/50 rounded-2xl p-4">
+            <div className="bg-blue-100 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-500/50 rounded-2xl p-4">
                 <div className="flex items-center justify-between gap-3 mb-3">
                     <div className="flex items-center gap-3">
-                         <UserPlusIcon className="w-6 h-6 text-blue-300"/>
+                         <UserPlusIcon className="w-6 h-6 text-blue-600 dark:text-blue-300"/>
                         <div>
-                            <h3 className="font-bold text-blue-200">My Emergency Contacts</h3>
-                            <p className="text-xs text-blue-300/80">Your personal safety contacts</p>
+                            <h3 className="font-bold text-blue-800 dark:text-blue-200">My Emergency Contacts</h3>
+                            <p className="text-xs text-blue-600 dark:text-blue-300/80">Your personal safety contacts</p>
                         </div>
                     </div>
                     {!isAdding && (
                         <button 
                             onClick={() => setIsAdding(true)}
-                            className="bg-blue-500/20 text-blue-200 px-3 py-1 rounded-full text-sm hover:bg-blue-500/40 transition-colors"
+                            className="bg-blue-500/20 text-blue-700 dark:text-blue-200 px-3 py-1 rounded-full text-sm hover:bg-blue-500/40 transition-colors"
                         >
                             + Add
                         </button>
@@ -248,34 +275,34 @@ const CustomEmergencyContacts: React.FC = () => {
                             value={newName}
                             onChange={(e) => setNewName(e.target.value)}
                             placeholder="Contact Name (e.g., Jane Doe)"
-                            className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white placeholder-gray-500 text-sm"
+                            className="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg p-2 text-gray-900 dark:text-white placeholder-gray-500 text-sm"
                         />
                         <input
                             type="tel"
                             value={newPhone}
                             onChange={(e) => setNewPhone(e.target.value)}
                             placeholder="Phone Number (e.g., +1 555 1234)"
-                            className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white placeholder-gray-500 text-sm"
+                            className="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg p-2 text-gray-900 dark:text-white placeholder-gray-500 text-sm"
                         />
                         {error && <p className="text-xs text-red-400">{error}</p>}
                         <div className="flex gap-2 justify-end">
-                            <button onClick={() => { setIsAdding(false); setError(''); }} className="bg-gray-700/80 px-4 py-1.5 rounded-md text-sm">Cancel</button>
-                            <button onClick={handleAddContact} className="bg-blue-500 px-4 py-1.5 rounded-md text-sm text-black font-semibold">Save</button>
+                            <button onClick={() => { setIsAdding(false); setError(''); }} className="bg-gray-200 dark:bg-gray-700/80 px-4 py-1.5 rounded-md text-sm">Cancel</button>
+                            <button onClick={handleAddContact} className="bg-blue-500 px-4 py-1.5 rounded-md text-sm text-white dark:text-black font-semibold">Save</button>
                         </div>
                     </div>
                 ) : (
                     <div className="space-y-2">
                         {contacts.length === 0 ? (
-                            <div className="text-center py-4 text-sm text-gray-400">
+                            <div className="text-center py-4 text-sm text-gray-500 dark:text-gray-400">
                                 <p>No contacts added yet.</p>
                                 <p>Add your first emergency contact for peace of mind.</p>
                             </div>
                         ) : (
                             contacts.map((contact, index) => (
-                                <div key={index} className="bg-gray-800/50 p-3 rounded-lg flex justify-between items-center">
+                                <div key={index} className="bg-white/50 dark:bg-gray-800/50 p-3 rounded-lg flex justify-between items-center">
                                     <div>
-                                        <p className="font-semibold text-gray-200">{contact.name}</p>
-                                        <a href={`tel:${contact.phone}`} className="text-sm text-teal-400 hover:underline">{contact.phone}</a>
+                                        <p className="font-semibold text-gray-800 dark:text-gray-200">{contact.name}</p>
+                                        <a href={`tel:${contact.phone}`} className="text-sm text-teal-600 dark:text-teal-400 hover:underline">{contact.phone}</a>
                                     </div>
                                     <button 
                                         onClick={() => handleRemoveContact(index)}
@@ -296,23 +323,23 @@ const CustomEmergencyContacts: React.FC = () => {
 
 const Stats: React.FC = () => (
     <div className="p-4 grid grid-cols-3 gap-4">
-        <div className="bg-[#1C1C1E] border border-gray-800 p-3 rounded-2xl text-center">
-            <p className="text-2xl font-bold text-teal-400">150+</p>
-            <p className="text-xs text-gray-400">Destinations</p>
+        <div className="bg-white dark:bg-[#1C1C1E] border border-gray-200 dark:border-gray-800 p-3 rounded-2xl text-center">
+            <p className="text-2xl font-bold text-teal-600 dark:text-teal-400">150+</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Destinations</p>
         </div>
-         <div className="bg-[#1C1C1E] border border-gray-800 p-3 rounded-2xl text-center">
-            <p className="text-2xl font-bold text-teal-400">50+</p>
-            <p className="text-xs text-gray-400">Itineraries</p>
+         <div className="bg-white dark:bg-[#1C1C1E] border border-gray-200 dark:border-gray-800 p-3 rounded-2xl text-center">
+            <p className="text-2xl font-bold text-teal-600 dark:text-teal-400">50+</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Itineraries</p>
         </div>
-         <div className="bg-[#1C1C1E] border border-gray-800 p-3 rounded-2xl text-center">
-            <p className="text-2xl font-bold text-teal-400">24/7</p>
-            <p className="text-xs text-gray-400">AI Support</p>
+         <div className="bg-white dark:bg-[#1C1C1E] border border-gray-200 dark:border-gray-800 p-3 rounded-2xl text-center">
+            <p className="text-2xl font-bold text-teal-600 dark:text-teal-400">24/7</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">AI Support</p>
         </div>
     </div>
 );
 
 const DestinationCard: React.FC<{dest: Omit<Destination, 'id'>; onClick: () => void; onImageClick: () => void;}> = ({ dest, onClick, onImageClick }) => (
-    <button onClick={onClick} className="bg-[#1C1C1E] border border-gray-800 rounded-2xl overflow-hidden w-full text-left hover:border-teal-500/50 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-teal-500">
+    <button onClick={onClick} className="bg-white dark:bg-[#1C1C1E] border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden w-full text-left hover:border-teal-500/50 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-teal-500">
         <div className="relative group">
             <img 
                 src={dest.image} 
@@ -340,20 +367,20 @@ const DestinationCard: React.FC<{dest: Omit<Destination, 'id'>; onClick: () => v
         </div>
         <div className="p-4">
             <h4 className="font-bold text-lg">{dest.name}</h4>
-            <p className="text-sm text-gray-400">📍 {dest.location}</p>
-            <p className="text-sm text-gray-300 mt-2 leading-relaxed">{dest.description}</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">📍 {dest.location}</p>
+            <p className="text-sm text-gray-700 dark:text-gray-300 mt-2 leading-relaxed">{dest.description}</p>
         </div>
     </button>
 );
 
 const DestinationCardSkeleton: React.FC = () => (
-    <div className="bg-[#1C1C1E] border border-gray-800 rounded-2xl overflow-hidden w-full">
-        <div className="w-full h-40 bg-gray-700 animate-pulse"></div>
+    <div className="bg-white dark:bg-[#1C1C1E] border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden w-full">
+        <div className="w-full h-40 bg-gray-300 dark:bg-gray-700 animate-pulse"></div>
         <div className="p-4 space-y-2">
-            <div className="h-6 w-3/4 bg-gray-700 rounded animate-pulse"></div>
-            <div className="h-4 w-1/2 bg-gray-700 rounded animate-pulse"></div>
-            <div className="h-4 w-full bg-gray-700 rounded animate-pulse mt-2"></div>
-            <div className="h-4 w-5/6 bg-gray-700 rounded animate-pulse"></div>
+            <div className="h-6 w-3/4 bg-gray-300 dark:bg-gray-700 rounded animate-pulse"></div>
+            <div className="h-4 w-1/2 bg-gray-300 dark:bg-gray-700 rounded animate-pulse"></div>
+            <div className="h-4 w-full bg-gray-300 dark:bg-gray-700 rounded animate-pulse mt-2"></div>
+            <div className="h-4 w-5/6 bg-gray-300 dark:bg-gray-700 rounded animate-pulse"></div>
         </div>
     </div>
 );
@@ -363,24 +390,24 @@ const SearchResultsModal: React.FC<{ result: SearchResult | null; onClose: () =>
     return (
         <div className="fixed inset-0 max-w-md mx-auto z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center" onClick={onClose}>
             <div 
-                className="bg-[#101010] w-[95%] h-[90%] rounded-2xl flex flex-col border border-gray-700 p-4"
+                className="bg-gray-50 dark:bg-[#101010] w-[95%] h-[90%] rounded-2xl flex flex-col border border-gray-200 dark:border-gray-700 p-4"
                 onClick={(e) => e.stopPropagation()}
             >
-                <div className="flex justify-between items-center pb-3 border-b border-gray-800">
+                <div className="flex justify-between items-center pb-3 border-b border-gray-200 dark:border-gray-800">
                     <h2 className="text-xl font-bold">AI Search Results</h2>
-                    <button onClick={onClose} className="text-gray-400 text-2xl">&times;</button>
+                    <button onClick={onClose} className="text-gray-500 dark:text-gray-400 text-2xl">&times;</button>
                 </div>
                 <div className="flex-1 overflow-y-auto mt-4 space-y-4">
-                    <div className="bg-gray-900/50 p-3 rounded-lg border border-gray-800">
-                      <p className="text-gray-200 whitespace-pre-wrap">{result.text}</p>
+                    <div className="bg-white dark:bg-gray-900/50 p-3 rounded-lg border border-gray-200 dark:border-gray-800">
+                      <p className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{result.text}</p>
                     </div>
                     {result.sources.length > 0 && (
                         <div>
-                            <h3 className="font-semibold text-teal-400 mb-2">Sources:</h3>
+                            <h3 className="font-semibold text-teal-600 dark:text-teal-400 mb-2">Sources:</h3>
                             <ul className="space-y-2">
                                 {result.sources.map((source, index) => source.web && (
-                                    <li key={index} className="bg-gray-800 p-2 rounded-md text-sm">
-                                        <a href={source.web.uri} target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:underline">
+                                    <li key={index} className="bg-gray-100 dark:bg-gray-800 p-2 rounded-md text-sm">
+                                        <a href={source.web.uri} target="_blank" rel="noopener noreferrer" className="text-cyan-600 dark:text-cyan-400 hover:underline">
                                            {source.web.title}
                                         </a>
                                     </li>
@@ -425,7 +452,7 @@ const DestinationDetailModal: React.FC<{ destination: Omit<Destination, 'id'> | 
     return (
         <div className="fixed inset-0 max-w-md mx-auto z-50 bg-black/70 backdrop-blur-sm flex items-end justify-center" onClick={onClose}>
             <div 
-                className="bg-[#101010] w-full h-[95%] rounded-t-3xl flex flex-col border-t border-gray-700"
+                className="bg-gray-50 dark:bg-[#101010] w-full h-[95%] rounded-t-3xl flex flex-col border-t border-gray-200 dark:border-gray-700"
                 onClick={(e) => e.stopPropagation()}
             >
                 <div className="relative">
@@ -439,19 +466,19 @@ const DestinationDetailModal: React.FC<{ destination: Omit<Destination, 'id'> | 
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                    <div className="flex items-center gap-2 text-yellow-400 bg-yellow-500/10 border border-yellow-500/20 px-3 py-2 rounded-lg">
+                    <div className="flex items-center gap-2 text-yellow-600 dark:text-yellow-400 bg-yellow-500/10 border border-yellow-500/20 px-3 py-2 rounded-lg">
                         <SparklesIcon className="w-5 h-5"/>
                         <p className="text-sm font-semibold">AI-Generated Travel Guide</p>
                     </div>
                     {isLoading && !details && (
-                         <div className="flex items-center justify-center gap-2 p-8 text-gray-400">
+                         <div className="flex items-center justify-center gap-2 p-8 text-gray-500 dark:text-gray-400">
                            <SparklesIcon className="w-5 h-5 animate-pulse" />
                            <span>Generating your guide...</span>
                         </div>
                     )}
                     {error && <div className="text-center p-4 text-red-400">{error}</div>}
                     {details && (
-                        <div className="prose prose-invert max-w-none text-gray-300 whitespace-pre-wrap">
+                        <div className="prose dark:prose-invert max-w-none text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
                             {details}
                         </div>
                     )}
@@ -490,16 +517,11 @@ const HomeScreen: React.FC = () => {
     const [searchResults, setSearchResults] = useState<SearchResult | null>(null);
     const [isSearching, setIsSearching] = useState(false);
     const [searchError, setSearchError] = useState('');
-    const [destinations, setDestinations] = useState<Omit<Destination, 'id'>[]>([]);
-    const [isLoadingAIDestinations, setIsLoadingAIDestinations] = useState(true);
     const [selectedDestination, setSelectedDestination] = useState<Omit<Destination, 'id'> | null>(null);
     const [zoomedImage, setZoomedImage] = useState<string | null>(null);
     
     // State for new dynamic features & search
     const [searchQuery, setSearchQuery] = useState('');
-    const [dynamicHero, setDynamicHero] = useState<DynamicHeroContent | null>(null);
-    const [travelTip, setTravelTip] = useState<string | null>(null);
-    const [isLoadingDynamicContent, setIsLoadingDynamicContent] = useState(true);
     const [isListening, setIsListening] = useState(false);
     const recognitionRef = useRef<any>(null);
 
@@ -544,12 +566,12 @@ const HomeScreen: React.FC = () => {
     };
 
 
-    const handleSearch = async () => {
-        if (!searchQuery.trim()) return;
+    const handleSearch = async (query: string) => {
+        if (!query.trim()) return;
         setIsSearching(true);
         setSearchError('');
         try {
-            const response = await getAiSearchGroundedResponse(searchQuery);
+            const response = await getAiSearchGroundedResponse(query);
             const groundingMetadata = response.candidates?.[0]?.groundingMetadata;
             setSearchResults({
                 text: response.text,
@@ -565,89 +587,47 @@ const HomeScreen: React.FC = () => {
     
     const handleCategoryClick = (category: string) => {
         setSearchQuery(category);
-        handleSearch();
+        handleSearch(category);
     };
 
     const handleFilterClick = (append: string) => {
         setSearchQuery(prev => (prev.trim() + ' ' + append).trim());
     };
 
-    useEffect(() => {
-        const fetchDynamicContent = async () => {
-            setIsLoadingDynamicContent(true);
-            try {
-                const [heroContent, tip] = await Promise.all([
-                    getDynamicHeroContent(),
-                    getTravelTip(),
-                ]);
-                setDynamicHero(heroContent);
-                setTravelTip(tip);
-            } catch (error) {
-                console.error("Failed to fetch dynamic hero/tip:", error);
-            } finally {
-                setIsLoadingDynamicContent(false);
-            }
-        };
-
-        const fetchAIDestinations = async () => {
-            setIsLoadingAIDestinations(true);
-            try {
-                // The service now returns a full list of destinations with AI-generated images
-                const newDestinations = await getAIFeaturedDestinations(3);
-                setDestinations(newDestinations);
-            } catch (error) {
-                console.error("Failed to fetch AI destinations:", error);
-            } finally {
-                setIsLoadingAIDestinations(false);
-            }
-        };
-
-        fetchDynamicContent();
-        fetchAIDestinations();
-    }, []);
-
     return (
         <>
-            <div className="w-full text-white space-y-4 pb-4">
-                <PersonalizedHeader name="John" />
-                <DynamicDiscoverSection content={dynamicHero} isLoading={isLoadingDynamicContent} />
+            <div className="w-full space-y-4 pb-4">
+                <PersonalizedHeader name="Explorer" />
+                <DynamicDiscoverSection content={staticHeroContent} isLoading={false} />
                 <SearchBar 
                     query={searchQuery} 
                     onQueryChange={setSearchQuery} 
-                    onSearch={handleSearch}
+                    onSearch={() => handleSearch(searchQuery)}
                     onVoiceClick={handleVoiceSearch}
                     isListening={isListening}
                 />
                 <SearchFilters onFilterClick={handleFilterClick} />
 
-                {isSearching && <div className="text-center px-4 -my-2 text-sm text-gray-400">🔎 Searching with AI...</div>}
+                {isSearching && <div className="text-center px-4 -my-2 text-sm text-gray-500 dark:text-gray-400">🔎 Searching with AI...</div>}
                 {searchError && <div className="text-center px-4 -my-2 text-sm text-red-400">{searchError}</div>}
                 
-                <TravelTipCard tip={travelTip} isLoading={isLoadingDynamicContent} />
-                <Categories onCategoryClick={setSearchQuery} />
+                <TravelTipCard tip={staticTravelTip} isLoading={false} />
+                <Categories onCategoryClick={handleCategoryClick} />
                 
                 <div className="px-4 pt-4">
                     <div className="flex justify-between items-center mb-2">
                         <h2 className="text-xl font-bold">Featured Destinations</h2>
-                        <a href="#" className="text-sm text-teal-400">View all</a>
+                        <a href="#" className="text-sm text-teal-600 dark:text-teal-400">View all</a>
                     </div>
                     <div className="space-y-4">
-                        {isLoadingAIDestinations ? (
-                            <>
-                                <DestinationCardSkeleton />
-                                <DestinationCardSkeleton />
-                                <DestinationCardSkeleton />
-                            </>
-                        ) : (
-                           destinations.map(dest => (
-                                <DestinationCard 
-                                    key={dest.name} 
-                                    dest={dest} 
-                                    onClick={() => setSelectedDestination(dest)} 
-                                    onImageClick={() => setZoomedImage(dest.image)}
-                                />
-                            ))
-                        )}
+                       {staticDestinations.map(dest => (
+                            <DestinationCard 
+                                key={dest.name} 
+                                dest={dest} 
+                                onClick={() => setSelectedDestination(dest)} 
+                                onImageClick={() => setZoomedImage(dest.image)}
+                            />
+                        ))}
                     </div>
                 </div>
                 

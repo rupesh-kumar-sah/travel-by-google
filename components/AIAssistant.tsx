@@ -73,32 +73,32 @@ const AIAssistant: React.FC = () => {
       {isOpen && (
         <div className="fixed inset-0 max-w-md mx-auto z-40 bg-black/50 backdrop-blur-sm" onClick={() => setIsOpen(false)}>
           <div 
-            className="absolute bottom-0 left-0 right-0 h-[85%] bg-[#101010] rounded-t-3xl flex flex-col p-4 border-t border-gray-700"
+            className="absolute bottom-0 left-0 right-0 h-[85%] bg-gray-50 dark:bg-[#101010] rounded-t-3xl flex flex-col p-4 border-t border-gray-200 dark:border-gray-700"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between pb-4 border-b border-gray-800">
+            <div className="flex items-center justify-between pb-4 border-b border-gray-200 dark:border-gray-800">
                 <div className="flex items-center gap-3">
-                    <SparklesIcon className="w-6 h-6 text-teal-400"/>
-                    <h2 className="text-xl font-bold text-white">AI Travel Assistant</h2>
+                    <SparklesIcon className="w-6 h-6 text-teal-500 dark:text-teal-400"/>
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-white">AI Travel Assistant</h2>
                 </div>
-                <button onClick={() => setIsOpen(false)} className="text-gray-400 text-2xl">&times;</button>
+                <button onClick={() => setIsOpen(false)} className="text-gray-500 dark:text-gray-400 text-2xl">&times;</button>
             </div>
 
             <div className="flex-1 overflow-y-auto my-4 space-y-4 pr-2">
               {messages.map((msg, index) => (
                 <div key={index} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-xs md:max-w-sm px-4 py-2 rounded-2xl ${msg.role === 'user' ? 'bg-teal-600 text-white rounded-br-none' : 'bg-gray-800 text-gray-200 rounded-bl-none'}`}>
+                  <div className={`max-w-xs md:max-w-sm px-4 py-2 rounded-2xl ${msg.role === 'user' ? 'bg-teal-600 text-white rounded-br-none' : 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-bl-none shadow-sm'}`}>
                     <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
                   </div>
                 </div>
               ))}
               {isLoading && messages[messages.length-1].role === 'user' && ( // show loading dots only if last message is user (before model starts streaming)
                   <div className="flex justify-start">
-                    <div className="bg-gray-800 text-gray-200 rounded-2xl rounded-bl-none px-4 py-3">
+                    <div className="bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-2xl rounded-bl-none px-4 py-3">
                         <div className="flex items-center space-x-2">
-                            <div className="w-2 h-2 bg-teal-400 rounded-full animate-pulse"></div>
-                            <div className="w-2 h-2 bg-teal-400 rounded-full animate-pulse [animation-delay:0.2s]"></div>
-                            <div className="w-2 h-2 bg-teal-400 rounded-full animate-pulse [animation-delay:0.4s]"></div>
+                            <div className="w-2 h-2 bg-teal-500 dark:bg-teal-400 rounded-full animate-pulse"></div>
+                            <div className="w-2 h-2 bg-teal-500 dark:bg-teal-400 rounded-full animate-pulse [animation-delay:0.2s]"></div>
+                            <div className="w-2 h-2 bg-teal-500 dark:bg-teal-400 rounded-full animate-pulse [animation-delay:0.4s]"></div>
                         </div>
                     </div>
                   </div>
@@ -113,7 +113,7 @@ const AIAssistant: React.FC = () => {
                 onChange={(e) => setInput(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder="Ask me anything about Nepal..."
-                className="w-full bg-gray-800 border border-gray-700 rounded-full py-3 pl-5 pr-14 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                className="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-full py-3 pl-5 pr-14 text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500"
               />
               <button onClick={handleSend} className="absolute right-2 top-1/2 -translate-y-1/2 bg-teal-500 p-2.5 rounded-full disabled:bg-gray-600" disabled={isLoading}>
                 <SendIcon className="w-5 h-5 text-black" />

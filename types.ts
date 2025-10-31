@@ -49,6 +49,8 @@ export interface FeedPost {
   likes: number;
   comments: number;
   timestamp: string;
+  isLiked?: boolean;
+  isSaved?: boolean;
 }
 
 export interface Place {
@@ -62,4 +64,41 @@ export interface Place {
 export interface ChatMessage {
   role: 'user' | 'model';
   text: string;
+}
+
+// Added GroundingChunk type for reuse
+export interface GroundingChunk {
+    web?: {
+        uri: string;
+        title: string;
+    };
+    maps?: {
+        uri: string;
+        title: string;
+        placeAnswerSources?: {
+            reviewSnippets: {
+                uri: string;
+                title: string;
+                text: string;
+            }[];
+        }[]
+    }
+}
+
+export interface SearchResult {
+    text: string;
+    sources: GroundingChunk[];
+}
+
+// Moved from geminiService.ts
+export interface TripIdea {
+  title: string;
+  prompt: string;
+}
+
+// Moved from geminiService.ts
+export interface DynamicHeroContent {
+  title: string;
+  description: string;
+  image: string; // base64 string or URL
 }

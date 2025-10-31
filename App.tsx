@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import SplashScreen from './components/SplashScreen';
 import OnboardingScreen from './components/OnboardingScreen';
@@ -14,6 +13,24 @@ import { Screen } from './types';
 export default function App() {
   const [appState, setAppState] = useState('splash'); // splash, onboarding, main
   const [activeScreen, setActiveScreen] = useState<Screen>(Screen.Home);
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    const savedTheme = localStorage.getItem('theme');
+    return (savedTheme === 'light' || savedTheme === 'dark') ? savedTheme : 'dark';
+  });
+
+  useEffect(() => {
+    const root = window.document.documentElement;
+    if (theme === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prevTheme => prevTheme === 'dark' ? 'light' : 'dark');
+  };
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -37,7 +54,7 @@ export default function App() {
       case Screen.Feed:
         return <FeedScreen />;
       case Screen.Profile:
-        return <ProfileScreen />;
+        return <ProfileScreen theme={theme} toggleTheme={toggleTheme} />;
       default:
         return <HomeScreen />;
     }
@@ -52,7 +69,7 @@ export default function App() {
   }
 
   return (
-    <div className="h-screen w-screen max-w-md mx-auto bg-[#0D0D0D] flex flex-col font-sans overflow-hidden">
+    <div className="h-screen w-screen max-w-md mx-auto bg-gray-50 dark:bg-[#0D0D0D] flex flex-col font-sans overflow-hidden">
       <main className="flex-1 overflow-y-auto pb-20 scroll-smooth">
         {renderScreen()}
       </main>

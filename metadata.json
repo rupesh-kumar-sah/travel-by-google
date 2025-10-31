@@ -2,6 +2,7 @@
   "name": "TravelNepal.ai - Your AI Travel Companion",
   "description": "An AI-powered travel application for exploring Nepal. Get personalized itineraries, discover local spots, and navigate with an intelligent assistant. Features include an AI trip planner, an interactive map, a travel feed, and a user profile.",
   "requestFramePermissions": [
-    "geolocation"
+    "geolocation",
+    "microphone"
   ]
 }
